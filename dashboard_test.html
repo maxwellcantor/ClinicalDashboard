@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical Operations Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
+:root {
+  --bg:#f6f8fa;--surface:#ffffff;--surface2:#f0f2f5;--border:#d0d7de;
+  --text:#1f2328;--dim:#656d76;
+  --blue:#0969da;--orange:#bc4c00;--green:#1a7f37;--red:#cf222e;--purple:#8250df;--yellow:#9a6700;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 22px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
+.hdr h1{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.hdr-right{margin-left:auto;color:var(--dim);font-size:11px;font-family:'DM Mono',monospace;}
+
+.fbar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;font-family:'DM Mono',monospace;}
+.frow{display:flex;gap:5px;flex-wrap:wrap;}
+select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;outline:none;}
+select:focus{border-color:var(--blue);}
+.rbtn{padding:4px 10px;border-radius:20px;border:1px solid;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Mono',monospace;background:transparent;user-select:none;transition:all .12s;}
+.rbtn.Blue{border-color:var(--blue);color:var(--blue);}   .rbtn.Blue.on{background:var(--blue);color:#ffffff;}
+.rbtn.Orange{border-color:var(--orange);color:var(--orange);} .rbtn.Orange.on{background:var(--orange);color:#ffffff;}
+.rbtn.Green{border-color:var(--green);color:var(--green);}  .rbtn.Green.on{background:var(--green);color:#ffffff;}
+.rbtn.Red{border-color:var(--red);color:var(--red);}    .rbtn.Red.on{background:var(--red);color:#ffffff;}
+.rbtn.Purple{border-color:var(--purple);color:var(--purple);} .rbtn.Purple.on{background:var(--purple);color:#ffffff;}
+.cbtn{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--dim);font-size:10px;cursor:pointer;font-family:'DM Mono',monospace;user-select:none;transition:all .12s;}
+.cbtn.Blue.on{border-color:var(--blue);color:var(--blue);background:rgba(9,105,218,.1);}
+.cbtn.Orange.on{border-color:var(--orange);color:var(--orange);background:rgba(188,76,0,.1);}
+.cbtn.Green.on{border-color:var(--green);color:var(--green);background:rgba(26,127,55,.1);}
+.cbtn.Red.on{border-color:var(--red);color:var(--red);background:rgba(207,34,46,.1);}
+.cbtn.Purple.on{border-color:var(--purple);color:var(--purple);background:rgba(130,80,223,.1);}
+.mbtn{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--dim);font-size:10px;cursor:pointer;font-family:'DM Mono',monospace;}
+.mbtn:hover{border-color:var(--blue);color:var(--blue);}
+.cgrid{display:flex;flex-wrap:wrap;gap:3px;max-width:920px;}
+
+.main{padding:16px 22px;display:flex;flex-direction:column;gap:16px;}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:2px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.sec-lbl{font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 13px;}
+.kpi-lbl{font-size:9px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;font-family:'DM Mono',monospace;}
+.kpi-val{font-size:22px;font-weight:700;line-height:1.2;font-family:'DM Mono',monospace;}
+.kpi-sub{font-size:9px;color:var(--dim);}
+.kpi.bl{border-left:3px solid var(--blue);} .kpi.gr{border-left:3px solid var(--green);}
+.kpi.or{border-left:3px solid var(--orange);} .kpi.re{border-left:3px solid var(--red);}
+.kpi.pu{border-left:3px solid var(--purple);} .kpi.ye{border-left:3px solid var(--yellow);}
+
+/* CHART TOGGLES */
+.chart-toggles{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.chtbtn{padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Mono',monospace;transition:all .12s;}
+.chtbtn.on{border-color:var(--blue);color:var(--blue);background:rgba(9,105,218,.1);}
+
+/* MODE TOGGLE */
+.mode-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.mode-lbl{font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;}
+.tbar{display:flex;gap:2px;background:var(--surface2);padding:3px;border-radius:6px;}
+.tbtn{padding:4px 12px;border-radius:4px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:all .12s;}
+.tbtn.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.info-pill{font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;background:var(--surface2);border:1px solid var(--border);padding:3px 8px;border-radius:4px;}
+
+/* CHART GRID */
+.chart-grid{display:grid;gap:10px;}
+.chart-grid.cols-1{grid-template-columns:1fr;}
+.chart-grid.cols-2{grid-template-columns:1fr 1fr;}
+.chart-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+@media(max-width:1100px){.chart-grid.cols-3{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.chart-grid.cols-2,.chart-grid.cols-3{grid-template-columns:1fr;}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px;}
+.card.hidden{display:none;}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.ct{font-size:12px;font-weight:600;}
+.cs{font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;}
+.cw{position:relative;height:200px;}
+
+/* Per-clinic chart panels */
+.clinic-charts-wrap{display:flex;flex-direction:column;gap:10px;}
+.clinic-chart-group{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px;}
+.clinic-chart-title{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.clinic-charts-inner{display:grid;gap:8px;}
+
+/* Dist bars */
+.dbars{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
+.drow{display:flex;align-items:center;gap:6px;}
+.dlbl{width:44px;font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;text-align:right;flex-shrink:0;}
+.dbg{flex:1;height:15px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.dfill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:5px;}
+.dcnt{font-size:9px;font-family:'DM Mono',monospace;color:rgba(255,255,255,.7);}
+.dpct{width:36px;font-size:10px;font-family:'DM Mono',monospace;color:var(--dim);text-align:right;flex-shrink:0;}
+
+/* Tables */
+.tbl-section{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px;}
+.tbl-controls{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
+.tbl-wrap{overflow-x:auto;max-height:480px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:11px;}
+thead th{background:var(--surface2);color:var(--dim);padding:6px 9px;text-align:left;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;z-index:2;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+thead th:hover{color:var(--text);}
+thead th.sorted{color:var(--blue);}
+thead th.sorted::after{content:attr(data-dir);margin-left:3px;font-size:8px;}
+tbody tr{border-bottom:1px solid rgba(48,54,61,.4);}
+tbody tr:hover{background:rgba(9,105,218,.04);}
+tbody td{padding:5px 9px;white-space:nowrap;}
+.cell-bar{display:inline-flex;align-items:center;gap:4px;}
+.mini-bar{height:8px;border-radius:2px;display:inline-block;}
+.search-inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;outline:none;width:160px;}
+.search-inp:focus{border-color:var(--blue);}
+.al{display:flex;gap:10px;font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;margin-top:5px;flex-wrap:wrap;}
+.ali{display:flex;align-items:center;gap:4px;}
+.aline{width:16px;height:0;border-top:2px dashed;}
+
+/* Loading */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:12px;}
+.spin{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.ltxt{color:var(--dim);font-family:'DM Mono',monospace;font-size:12px;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* ─── Upload button ─── */
+.upload-btn{padding:5px 12px;border-radius:5px;border:1px solid var(--blue);background:rgba(9,105,218,.1);color:var(--blue);font-family:'DM Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;margin-left:10px;}
+.upload-btn:hover{background:var(--blue);color:#fff;}
+
+/* ─── Upload modal panel ─── */
+.upl-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:520px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.upl-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.upl-title{font-size:14px;font-weight:700;}
+.upl-close{background:none;border:none;font-size:16px;cursor:pointer;color:var(--dim);padding:2px 6px;border-radius:4px;}
+.upl-close:hover{background:var(--surface2);color:var(--text);}
+.upl-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
+.upl-info{font-size:11px;color:var(--dim);font-family:'DM Mono',monospace;line-height:1.6;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;}
+.upl-info strong{color:var(--text);}
+
+/* Drop zone */
+.upl-drop-zone{border:2px dashed var(--border);border-radius:8px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .15s;background:var(--surface2);}
+.upl-drop-zone.over{border-color:var(--blue);background:rgba(9,105,218,.06);}
+.upl-drop-text{font-size:12px;color:var(--dim);font-family:'DM Mono',monospace;}
+.upl-browse{color:var(--blue);cursor:pointer;text-decoration:underline;}
+
+/* File rows */
+.upl-file-list{display:flex;flex-direction:column;gap:5px;}
+.upl-file-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;}
+.upl-fname{flex:1;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.upl-badge{flex-shrink:0;font-size:9px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+.upl-remove{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 3px;flex-shrink:0;}
+.upl-remove:hover{color:var(--red);}
+
+/* Progress */
+.upl-progress-wrap{padding:0 2px;}
+.upl-progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.upl-progress-fill{height:100%;background:var(--blue);border-radius:2px;transition:width .2s ease;}
+
+/* Summary */
+.upl-summary{font-size:11px;font-family:'DM Mono',monospace;min-height:16px;}
+
+/* Footer */
+.upl-footer{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--border);}
+.upl-data-note{flex:1;font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;}
+.upl-cancel-btn{padding:5px 14px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--dim);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;}
+.upl-cancel-btn:hover{border-color:var(--text);color:var(--text);}
+.upl-process-btn{padding:5px 14px;border-radius:5px;border:none;background:var(--blue);color:#fff;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:background .12s;}
+.upl-process-btn:hover:not(:disabled){background:#0860ca;}
+.upl-process-btn:disabled{opacity:.45;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spin"></div><div class="ltxt">Loading clinical data...</div></div>
+
+<div class="hdr">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="5" fill="#58a6ff" opacity=".15"/><path d="M12 4v6.5l3.5 3.5" stroke="#58a6ff" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="6.5" stroke="#58a6ff" stroke-width="1.3" opacity=".6"/><circle cx="12" cy="12" r="1.8" fill="#58a6ff"/></svg>
+  <h1>Clinical Operations Dashboard</h1>
+  <div class="hdr-right" id="fsummary"></div>
+  <button class="upload-btn" id="open-upload-btn" onclick="openUploadModal()">⬆ Upload CSVs</button>
+</div>
+
+<div class="fbar">
+  <div class="fg">
+    <label>Year</label>
+    <select id="sel-year">
+      <!-- populated dynamically from data in buildFilterUI() -->
+    </select>
+  </div>
+  <div class="fg">
+    <label>Quarter</label>
+    <select id="sel-qtr">
+      <option value="all">All Quarters</option>
+      <option value="1">Q1</option><option value="2">Q2</option>
+      <option value="3">Q3</option><option value="4">Q4</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>Region</label>
+    <div class="frow" id="region-btns"></div>
+  </div>
+  <div class="fg" style="flex:1">
+    <label>Clinics &nbsp;
+      <button class="mbtn" id="sel-all">All</button>
+      <button class="mbtn" id="sel-none">None</button>
+    </label>
+    <div class="cgrid" id="clinic-btns"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- KPIs -->
+  <div>
+    <div class="sec-hdr"><div class="sec-lbl">Key Metrics</div></div>
+    <div class="kpi-row">
+      <div class="kpi bl"><div class="kpi-lbl">Visits / Week</div><div class="kpi-val" id="k-vpw">—</div><div class="kpi-sub">avg over period</div></div>
+      <div class="kpi gr"><div class="kpi-lbl">Evals / Week</div><div class="kpi-val" id="k-epw">—</div><div class="kpi-sub">avg over period</div></div>
+      <div class="kpi or"><div class="kpi-lbl">Referrals / Week</div><div class="kpi-val" id="k-rpw">—</div><div class="kpi-sub">avg over period</div></div>
+      <div class="kpi re"><div class="kpi-lbl">Days to Sign Off</div><div class="kpi-val" id="k-dts">—</div><div class="kpi-sub">avg days</div></div>
+      <div class="kpi pu"><div class="kpi-lbl">% Notes &gt;48h</div><div class="kpi-val" id="k-48h">—</div><div class="kpi-sub">late sign-offs</div></div>
+      <div class="kpi bl"><div class="kpi-lbl">Mon Capacity</div><div class="kpi-val" id="k-monc">—</div><div class="kpi-sub">Mon scheduled ÷ Mon capacity</div></div>
+      <div class="kpi ye"><div class="kpi-lbl">Fri Capacity</div><div class="kpi-val" id="k-fric">—</div><div class="kpi-sub">Fri scheduled ÷ Fri capacity</div></div>
+      <div class="kpi re"><div class="kpi-lbl">Lost Capacity</div><div class="kpi-val" id="k-lost">—</div><div class="kpi-sub">Mon% − Fri%</div></div>
+      <div class="kpi bl"><div class="kpi-lbl">Visits / Case</div><div class="kpi-val" id="k-vpe">—</div><div class="kpi-sub">avg episode length (discharged)</div></div>
+      <div class="kpi or"><div class="kpi-lbl">Ther Ex %</div><div class="kpi-val" id="k-tex">—</div><div class="kpi-sub">97110 of total units</div></div>
+    </div>
+  </div>
+
+  <!-- TRENDS -->
+  <div>
+    <div class="sec-hdr">
+      <div class="sec-lbl">Trends Over Time</div>
+    </div>
+
+    <!-- Chart toggle buttons -->
+    <div class="chart-toggles" id="chart-toggles">
+      <span style="font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;padding:4px 0;margin-right:4px;">Show charts:</span>
+      <button class="chtbtn on" data-chart="visits">Visits/Week</button>
+      <button class="chtbtn on" data-chart="refs">Referrals/Week</button>
+      <button class="chtbtn on" data-chart="lost">Lost Capacity %</button>
+      <button class="chtbtn on" data-chart="over48">% Notes >48h</button>
+      <button class="chtbtn on" data-chart="vpe">Visits/Case</button>
+      <button class="chtbtn on" data-chart="cap">Capacity</button>
+      <button class="chtbtn on" data-chart="cpt">CPT Mix</button>
+      <span style="width:1px;background:var(--border);margin:2px 4px;align-self:stretch;display:inline-block;"></span>
+      <button class="chtbtn on" id="labels-toggle" style="border-color:var(--yellow);color:var(--yellow);" title="Toggle data point labels on all charts">✓ Labels</button>
+    </div>
+
+    <!-- View mode -->
+    <div class="mode-row">
+      <span class="mode-lbl">Clinic view:</span>
+      <div class="tbar">
+        <button class="tbtn on" data-mode="combined" id="mode-combined">Combined</button>
+        <button class="tbtn" data-mode="per-clinic" id="mode-per-clinic">Per Clinic</button>
+      </div>
+      <span class="info-pill" id="mode-info">Aggregates selected clinics into one chart</span>
+    </div>
+
+    <div id="combined-charts">
+      <div class="chart-grid cols-2" id="trend-grid">
+        <div class="card" id="card-visits">
+          <div class="ch"><div class="ct">Visits per Week</div><span class="cs" id="cs-visits"></span></div>
+          <div class="cw"><canvas id="ch-visits"></canvas></div>
+          <div class="al" id="leg-visits"></div>
+        </div>
+        <div class="card" id="card-refs">
+          <div class="ch"><div class="ct">Referrals per Week</div><span class="cs" id="cs-refs"></span></div>
+          <div class="cw"><canvas id="ch-refs"></canvas></div>
+          <div class="al" id="leg-refs"></div>
+        </div>
+        <div class="card" id="card-lost">
+          <div class="ch"><div class="ct">Lost Capacity %</div><span class="cs">Mon→Fri capacity loss (2025)</span></div>
+          <div class="cw"><canvas id="ch-lost"></canvas></div>
+          <div class="al" id="leg-lost"></div>
+        </div>
+        <div class="card" id="card-over48">
+          <div class="ch"><div class="ct">% Notes Over 48h</div><span class="cs" id="cs-over48"></span></div>
+          <div class="cw"><canvas id="ch-over48"></canvas></div>
+          <div class="al" id="leg-over48"></div>
+        </div>
+        <div class="card" id="card-vpe">
+          <div class="ch"><div class="ct">Visits per Case</div><span class="cs">Avg episode length — discharged cases only</span></div>
+          <div class="cw"><canvas id="ch-vpe"></canvas></div>
+          <div class="al" id="leg-vpe"></div>
+        </div>
+        <div class="card" id="card-cap">
+          <div class="ch"><div class="ct">Capacity: Monday vs Friday</div><span class="cs">2025 only</span></div>
+          <div class="cw"><canvas id="ch-cap"></canvas></div>
+          <div class="al" id="leg-cap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-clinic mode -->
+    <div id="per-clinic-charts" style="display:none">
+      <div id="clinic-charts-container" class="clinic-charts-wrap"></div>
+    </div>
+  </div>
+
+  <!-- Comparison Tables -->
+  <div>
+    <div class="sec-hdr"><div class="sec-lbl">Clinic Comparison</div></div>
+    <div class="tbl-section">
+      <div class="tbl-wrap">
+        <table id="clinic-table"><thead id="clinic-thead"></thead><tbody id="clinic-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div id="cpt-section">
+    <div class="sec-hdr"><div class="sec-lbl">CPT Code Mix by Therapist</div><span class="info-pill">% of units billed per month · Top 5 codes + Other</span></div>
+    <div style="padding:8px 0 4px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <label style="color:var(--text-dim);font-size:11px;font-family:monospace;">Therapist:</label>
+      <select id="cpt-therapist-sel" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;font-family:monospace;min-width:200px;"></select>
+    </div>
+    <div style="position:relative;height:360px;padding:4px 0 16px 0;">
+      <canvas id="ch-cpt"></canvas>
+    </div>
+    <div id="cpt-legend" style="display:flex;flex-wrap:wrap;gap:8px 16px;padding:4px 0 16px 4px;font-size:11px;font-family:monospace;"></div>
+  </div>
+
+  <div>
+    <div class="sec-hdr"><div class="sec-lbl">Therapist Comparison</div><span class="info-pill">Min 20 visits · Fill rate from capacity sheet (Oct 2025–Mar 2026 only)</span></div>
+    <div class="tbl-section">
+      <div class="tbl-controls">
+        <input type="text" class="search-inp" id="t-search" placeholder="Search therapist...">
+      </div>
+      <div class="tbl-wrap">
+        <table id="t-table"><thead id="t-thead"></thead><tbody id="t-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const CR = {
+  'Acton':'Blue','Bristol':'Orange','Fox Hill Village':'Green','Grafton':'Red',
+  'Harvard':'Blue','Holliston':'Green','Leominster':'Blue','Mansfield':'Green',
+  'Medway':'Green','Millis':'Green','Oxford':'Red','Pepperell':'Blue',
+  'Plainville':'Green','Portsmouth':'Orange','Uxbridge':'Red','Wellesley':'Green',
+  'Worcester':'Red','Fall River':'Orange','Amesbury':'Purple','Groveland':'Purple',
+  'Salisbury':'Purple','Groton':'Blue','Medfield':'Green'
+};
+const RC = {Blue:'#58a6ff',Orange:'#f0883e',Green:'#3fb950',Red:'#f85149',Purple:'#bc8cff'};
+const ALL_CLINICS = Object.keys(CR).sort();
+const CHART_COLORS = ['#58a6ff','#3fb950','#f0883e','#bc8cff','#f85149','#e3b341',
+  '#79c0ff','#56d364','#ffa657','#d2a8ff','#ff7b72','#ffd700',
+  '#a5d6ff','#85e89d','#ffcb6b','#e5bfff'];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const S = {
+  year: String(new Date().getFullYear()),
+  qtr:  String(Math.ceil((new Date().getMonth()+1)/3)),
+  regions: new Set(['Blue','Orange','Green','Red','Purple']),
+  clinics: new Set(ALL_CLINICS),
+  mode: 'combined',  // 'combined' | 'per-clinic'
+  visibleCharts: new Set(['visits','refs','lost','over48','vpe','cap','cpt']),
+  showLabels: true,
+  clinicSort: {col:'short_clinic', dir:1},
+  therapistSort: {col:'visits_per_week', dir:-1},
+  therapistSearch: '',
+  data: null
+};
+let CH = {};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const avg = a => { const c=a.filter(x=>x!=null&&!isNaN(x)); return c.length?c.reduce((s,v)=>s+v,0)/c.length:null; };
+const sum = a => a.reduce((s,v)=>s+(+v||0),0);
+const fmt = (v,d=1) => v!=null&&!isNaN(v)?parseFloat(v).toFixed(d):'—';
+
+function filterWeekly(extraClinic=null) {
+  return S.data.weekly.filter(r => {
+    if (!matchYearQtr(r)) return false;
+    const c = extraClinic || r.short_clinic;
+    if (!S.clinics.has(r.short_clinic)) return false;
+    if (!S.regions.has(r.region)) return false;
+    return true;
+  });
+}
+function matchYearQtr(r) {
+  if (S.year !== 'both' && r.year !== parseInt(S.year)) return false;
+  if (S.qtr  !== 'all'  && r.quarter !== parseInt(S.qtr)) return false;
+  return true;
+}
+function filterData(arr) {
+  return arr.filter(r => matchYearQtr(r) && S.clinics.has(r.short_clinic) && S.regions.has(r.region));
+}
+function filterAll(arr) {
+  return arr.filter(r => matchYearQtr(r));
+}
+
+// ─── CHART HELPERS ────────────────────────────────────────────────────────────
+const bScales = {
+  x:{ticks:{color:'#8b949e',font:{family:'DM Mono',size:9},maxRotation:40},grid:{color:'rgba(208,215,222,.6)'}},
+  y:{ticks:{color:'#8b949e',font:{family:'DM Mono',size:9}},grid:{color:'rgba(208,215,222,.6)'}}
+};
+const bTip = {backgroundColor:'#ffffff',borderColor:'#d0d7de',borderWidth:1,titleColor:'#1f2328',bodyColor:'#656d76',titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono',size:11}};
+// Tooltip config for percent charts — rounds to 1dp and appends %
+const bTipPct = {...bTip, callbacks:{label: ctx => {
+  const v = ctx.parsed?.y ?? ctx.raw;
+  if (v==null||isNaN(v)) return '';
+  return ` ${parseFloat(v).toFixed(1)}%`;
+}}};
+const bLeg = {labels:{color:'#8b949e',font:{family:'DM Mono',size:10},boxWidth:10,padding:8}};
+
+const hLinePlugin = {
+  id:'hLine',
+  afterDraw(chart,_,opts){
+    if(!opts?.lines) return;
+    const {ctx,chartArea:{left:l,right:r},scales} = chart;
+    opts.lines.forEach(({y:yv,color,label,dash})=>{
+      if(yv==null||isNaN(yv)) return;
+      const yy=scales.y.getPixelForValue(yv);
+      if(yy<chart.chartArea.top||yy>chart.chartArea.bottom) return;
+      ctx.save(); ctx.strokeStyle=color||'#e3b341'; ctx.lineWidth=1.5;
+      ctx.setLineDash(dash||[5,4]);
+      ctx.beginPath(); ctx.moveTo(l,yy); ctx.lineTo(r,yy); ctx.stroke();
+      if(label){ctx.fillStyle=color||'#e3b341'; ctx.font='9px DM Mono,monospace'; ctx.fillText(label+' '+yv.toFixed(1),r-90,yy-3);}
+      ctx.restore();
+    });
+  }
+};
+Chart.register(hLinePlugin);
+Chart.register(ChartDataLabels);
+// datalabels display controlled per-chart via dlCfg(type)
+
+// Shared datalabel config factory
+function dlCfg(type, pct=false) {
+  return {
+    display: ctx => {
+      if (!S.showLabels) return false;
+      const val = ctx.dataset.data[ctx.dataIndex];
+      if (val==null||isNaN(val)||val===0) return false;
+      const n = ctx.dataset.data.filter(x=>x!=null&&x!==0).length;
+      const nDS = ctx.chart?.data?.datasets?.length || 1;
+      if (type==='line') {
+        if (n > 30) return ctx.dataIndex % Math.ceil(n/8) === 0;
+        if (n > 20) return ctx.dataIndex % Math.ceil(n/12) === 0;
+        return true;
+      }
+      // bar with multiple datasets: thin to avoid crowding
+      if (type==='bar' && nDS > 1 && n > 12) return ctx.dataIndex % 2 === 0;
+      return true;
+    },
+    formatter: (v, ctx) => {
+      if (v==null||isNaN(v)) return '';
+      const id = ctx.chart?.canvas?.id||'';
+      const isPct = pct||id.includes('lost')||id.includes('48h')||id.includes('over48')||id.includes('cap');
+      // Always 1 decimal place
+      if (isPct) return parseFloat(v).toFixed(1)+'%';
+      return parseFloat(v).toFixed(1);
+    },
+    color:'#656d76', font:{family:'DM Mono',size:8,weight:'500'},
+    anchor:'end', align:'top', offset:1, clip:false,
+    backgroundColor:'rgba(255,255,255,0.82)', borderRadius:2,
+    padding:{top:1,bottom:1,left:2,right:2}
+  };
+}
+
+function mkChart(id, type, data, opts={}) {
+  if (CH[id]) { CH[id].destroy(); delete CH[id]; }
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Deep-merge plugins so caller-supplied tooltip/hLine don't wipe datalabels
+  const basePlugins = {legend:bLeg, tooltip:bTip, datalabels:dlCfg(type)};
+  const mergedOpts  = {...opts};
+  if (opts.plugins) {
+    mergedOpts.plugins = {...basePlugins, ...opts.plugins};
+  }
+  CH[id] = new Chart(el.getContext('2d'), {
+    type, data,
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:20}},
+      ...mergedOpts,
+      plugins: mergedOpts.plugins || basePlugins,
+      scales: mergedOpts.scales || bScales,
+    }
+  });
+}
+
+function thinLabels(keys, max=52) {
+  const step = Math.max(1, Math.floor(keys.length/max));
+  return keys.map((k,i) => {
+    if (i%step!==0) return '';
+    const d = new Date(k+'T00:00:00');
+    return `${d.toLocaleString('default',{month:'short'})} ${d.getDate()}`;
+  });
+}
+
+// ─── YEAR-OVERLAY WEEKLY DATA ──────────────────────────────────────────────
+// All week_start values are guaranteed Mondays (date - dayofweek offset in Python).
+// For "Both Years" overlay: derive ISO week number (1-53) from the Monday date.
+function getWeekNumber(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  // ISO week: find nearest Thursday, then compute week of year
+  const thu = new Date(d);
+  thu.setDate(d.getDate() + 3); // Thursday of this Mon-Sun week
+  const jan1 = new Date(thu.getFullYear(), 0, 1);
+  return Math.ceil(((thu - jan1) / 86400000 + 1) / 7);
+}
+
+function buildWeeklyDatasets(rows, field, aggFn='sum', clinicFilter=null) {
+  // Returns {labels, datasets} ready for Chart.js
+  // If year=both: one dataset per year, x-axis = week-of-year labels
+  // If year=single: one dataset, x-axis = actual dates
+  const fn = aggFn==='sum' ? sum : avg;
+
+  const filtered = rows.filter(r => {
+    if (S.qtr !== 'all' && r.quarter !== parseInt(S.qtr)) return false;
+    if (clinicFilter && r.short_clinic !== clinicFilter) return false;
+    else if (!clinicFilter) {
+      if (!S.clinics.has(r.short_clinic)) return false;
+      if (!S.regions.has(r.region)) return false;
+    }
+    return true;
+  });
+
+  if (S.year !== 'both') {
+    const byWeek = {};
+    filtered.filter(r=>r.year===parseInt(S.year)).forEach(r=>{
+      if (!byWeek[r.week_start]) byWeek[r.week_start]=[];
+      if (r[field]!=null) byWeek[r.week_start].push(r[field]);
+    });
+    const keys = Object.keys(byWeek).sort();
+    return {
+      keys,
+      labels: thinLabels(keys),
+      datasets: [{
+        label: S.year,
+        data: keys.map(k=>byWeek[k].length?fn(byWeek[k]):null),
+        borderColor: CHART_COLORS[0], backgroundColor: CHART_COLORS[0]+'33',
+        fill: aggFn==='sum', tension:.3, pointRadius:1, borderWidth:2, spanGaps:true
+      }]
+    };
+  } else {
+    // Both years — overlay by week number
+    const yearData = {2024:{}, 2025:{}};
+    filtered.forEach(r=>{
+      const wn = getWeekNumber(r.week_start);
+      if (!yearData[r.year]) return;
+      if (!yearData[r.year][wn]) yearData[r.year][wn]=[];
+      if (r[field]!=null) yearData[r.year][wn].push(r[field]);
+    });
+    // Build 1..53 week labels
+    const allWns = new Set([...Object.keys(yearData[2024]),...Object.keys(yearData[2025])].map(Number));
+    const wns = Array.from(allWns).sort((a,b)=>a-b);
+    const labels = wns.map(w=>`Wk ${w}`);
+    const colors = ['#58a6ff','#f0883e'];
+    const datasets = [2024,2025].map((yr,i)=>({
+      label: String(yr),
+      data: wns.map(w=>yearData[yr][w]?.length?fn(yearData[yr][w]):null),
+      borderColor: colors[i], backgroundColor: colors[i]+'33',
+      fill: false, tension:.3, pointRadius:1, borderWidth:2, spanGaps:true
+    }));
+    return {keys: wns.map(String), labels, datasets};
+  }
+}
+
+function buildAllClinicDatasets(field, aggFn='sum') {
+  // Per-clinic mode: one dataset per clinic, overlay on same chart
+  const fn = aggFn==='sum' ? sum : avg;
+  const selClinics = ALL_CLINICS.filter(c=>S.clinics.has(c)&&S.regions.has(CR[c]));
+
+  if (S.year !== 'both') {
+    // x = actual week dates
+    const clinicWeeks = {};
+    S.data.weekly.filter(r=>r.year===parseInt(S.year)&&S.qtr==='all'||r.quarter===parseInt(S.qtr)).forEach(r=>{
+      if (!S.clinics.has(r.short_clinic)||!S.regions.has(r.region)) return;
+      if (S.qtr!=='all'&&r.quarter!==parseInt(S.qtr)) return;
+      if (!clinicWeeks[r.short_clinic]) clinicWeeks[r.short_clinic]={};
+      if (!clinicWeeks[r.short_clinic][r.week_start]) clinicWeeks[r.short_clinic][r.week_start]=[];
+      if (r[field]!=null) clinicWeeks[r.short_clinic][r.week_start].push(r[field]);
+    });
+    const allKeys = new Set(Object.values(clinicWeeks).flatMap(w=>Object.keys(w)));
+    const keys = Array.from(allKeys).sort();
+    return {
+      labels: thinLabels(keys),
+      datasets: selClinics.map((c,i)=>({
+        label: c,
+        data: keys.map(k=>clinicWeeks[c]?.[k]?.length?fn(clinicWeeks[c][k]):null),
+        borderColor: RC[CR[c]]||CHART_COLORS[i%CHART_COLORS.length],
+        backgroundColor: 'transparent',
+        tension:.3, pointRadius:1, borderWidth:2, spanGaps:true, fill:false
+      }))
+    };
+  } else {
+    // Both years: for per-clinic+both years, overlay year for each clinic
+    // Too many lines — just show one line per clinic averaged across years
+    const clinicWns = {};
+    S.data.weekly.filter(r=>{
+      if (S.qtr!=='all'&&r.quarter!==parseInt(S.qtr)) return false;
+      return S.clinics.has(r.short_clinic)&&S.regions.has(r.region);
+    }).forEach(r=>{
+      const wn = getWeekNumber(r.week_start);
+      if (!clinicWns[r.short_clinic]) clinicWns[r.short_clinic]={};
+      if (!clinicWns[r.short_clinic][wn]) clinicWns[r.short_clinic][wn]=[];
+      if (r[field]!=null) clinicWns[r.short_clinic][wn].push(r[field]);
+    });
+    const allWns = new Set(Object.values(clinicWns).flatMap(w=>Object.keys(w).map(Number)));
+    const wns = Array.from(allWns).sort((a,b)=>a-b);
+    return {
+      labels: wns.map(w=>`Wk ${w}`),
+      datasets: selClinics.map((c,i)=>({
+        label: c,
+        data: wns.map(w=>clinicWns[c]?.[w]?.length?fn(clinicWns[c][w]):null),
+        borderColor: RC[CR[c]]||CHART_COLORS[i%CHART_COLORS.length],
+        backgroundColor: 'transparent',
+        tension:.3, pointRadius:1, borderWidth:2, spanGaps:true, fill:false
+      }))
+    };
+  }
+}
+
+// ─── COMPANY AVG LINE ─────────────────────────────────────────────────────────
+function companyAvgVal(field, aggFn='sum') {
+  const fn = aggFn==='sum' ? sum : avg;
+  const all = S.data.weekly.filter(r=>matchYearQtr(r));
+  const byWk = {};
+  all.forEach(r=>{ if(!byWk[r.week_start])byWk[r.week_start]=[]; if(r[field]!=null)byWk[r.week_start].push(r[field]); });
+  const wkVals = Object.values(byWk).map(a=>a.length?fn(a):null).filter(x=>x!=null);
+  return wkVals.length ? avg(wkVals) : null;
+}
+
+// ─── KPIs ─────────────────────────────────────────────────────────────────────
+function computeKPIs() {
+  const wk = filterWeekly();
+  const byWk={};
+  wk.forEach(r=>{
+    if(!byWk[r.week_start])byWk[r.week_start]={v:0,e:0,ref:0,so:[],o48n:0,o48d:0};
+    byWk[r.week_start].v+=r.total_visits||0;
+    byWk[r.week_start].e+=r.evals||0;
+    byWk[r.week_start].ref+=r.referrals||0;
+    if(r.avg_signoff!=null)byWk[r.week_start].so.push(r.avg_signoff);
+    if(r.total_with_signoff>0){byWk[r.week_start].o48n+=r.over_48h_count||0;byWk[r.week_start].o48d+=r.total_with_signoff||0;}
+  });
+  const wks=Object.values(byWk);
+  const set=(id,v)=>document.getElementById(id).textContent=v!=null?v:'—';
+  set('k-vpw', wks.length?Math.round(avg(wks.map(w=>w.v))):null);
+  set('k-epw', wks.length?Math.round(avg(wks.map(w=>w.e))):null);
+  set('k-rpw', wks.length?Math.round(avg(wks.map(w=>w.ref))):null);
+  set('k-dts', avg(wks.flatMap(w=>w.so))?.toFixed(1));
+  const tot48=sum(wks.map(w=>w.o48d)),cnt48=sum(wks.map(w=>w.o48n));
+  set('k-48h', tot48>0?(cnt48/tot48*100).toFixed(1)+'%':null);
+
+  const cap=filterData(S.data.capacity);
+  if(cap.length){
+    // Use clinic_summary for KPI tiles — already in % from correct sum-then-divide calc
+    const cs_cap = filterData(S.data.clinic_summary).filter(r=>r.monday_fill_rate!=null);
+    const monVals = cs_cap.map(r=>r.monday_fill_rate).filter(x=>x!=null);
+    const friVals = cs_cap.map(r=>r.fill_rate).filter(x=>x!=null);
+    const lostVals = cs_cap.map(r=>r.lost_capacity_pct).filter(x=>x!=null);
+    set('k-monc', monVals.length ? avg(monVals).toFixed(1)+'%' : null);
+    set('k-fric', friVals.length ? avg(friVals).toFixed(1)+'%' : null);
+    set('k-lost', lostVals.length ? avg(lostVals).toFixed(1)+'%' : null);
+  } else ['k-monc','k-fric','k-lost'].forEach(id=>document.getElementById(id).textContent='—');
+
+  const vpe=filterData(S.data.visits_per_case);
+  set('k-vpe', avg(vpe.filter(r=>r.avg_visits_per_case).map(r=>r.avg_visits_per_case))?.toFixed(1));
+  const vpc=filterData(S.data.visits_per_case);
+  const cs=filterData(S.data.clinic_summary);
+  const texVals=cs.filter(r=>r.ther_ex_pct_avg).map(r=>r.ther_ex_pct_avg);
+  set('k-tex', texVals.length?avg(texVals).toFixed(1)+'%':null);
+}
+
+// ─── LEGEND BUILDER ──────────────────────────────────────────────────────────
+function setLegend(elId, items) {
+  const el=document.getElementById(elId); if(!el)return;
+  el.innerHTML = items.map(({color,label})=>
+    `<div class="ali"><div class="aline" style="border-color:${color}"></div>${label}</div>`
+  ).join('');
+}
+
+// ─── RENDER COMBINED CHARTS ───────────────────────────────────────────────────
+function renderCombined() {
+  const coAvgVisits = companyAvgVal('total_visits','sum');
+  const coAvgRefs   = companyAvgVal('referrals','sum');
+  const coAvg48h    = companyAvgVal('pct_over_48h','avg');
+
+  // Visits
+  if (S.visibleCharts.has('visits')) {
+    const d = buildWeeklyDatasets(S.data.weekly, 'total_visits','sum');
+    mkChart('ch-visits','line',{labels:d.labels,datasets:d.datasets},{
+      plugins:{legend:bLeg,tooltip:bTip,hLine:{lines:[{y:coAvgVisits,color:'#e3b341',label:'Avg'}]}},scales:bScales});
+    setLegend('leg-visits',[{color:'#e3b341',label:`Co Avg ${coAvgVisits?.toFixed(0)}`}]);
+  }
+
+  // Refs
+  if (S.visibleCharts.has('refs')) {
+    const d = buildWeeklyDatasets(S.data.weekly, 'referrals','sum');
+    mkChart('ch-refs','bar',{labels:d.labels,datasets:[{...d.datasets[0],type:'bar',backgroundColor:'rgba(63,185,80,.5)',borderColor:'#3fb950',borderWidth:1},
+      ...(d.datasets.slice(1).map(ds=>({...ds,type:'bar',backgroundColor:'rgba(63,185,80,.3)',borderColor:'#3fb95099',borderWidth:1})))]},{
+      plugins:{legend:bLeg,tooltip:bTip,hLine:{lines:[{y:coAvgRefs,color:'#e3b341',label:'Avg'}]}},scales:bScales});
+    setLegend('leg-refs',[{color:'#e3b341',label:`Co Avg ${coAvgRefs?.toFixed(0)}`}]);
+  }
+
+  // Lost capacity
+  if (S.visibleCharts.has('lost')) {
+    const capRows = S.data.capacity.filter(r=>S.clinics.has(r.short_clinic)&&S.regions.has(r.region));
+    const byWk={};
+    capRows.forEach(r=>{ if(!byWk[r.week_start])byWk[r.week_start]=[]; if(r.lost_capacity!=null)byWk[r.week_start].push(r.lost_capacity); });
+    const allCapRows = S.data.capacity;
+    const byWkAll={};
+    allCapRows.forEach(r=>{ if(!byWkAll[r.week_start])byWkAll[r.week_start]=[]; if(r.lost_capacity!=null)byWkAll[r.week_start].push(r.lost_capacity); });
+    const coAvgLost = avg(Object.values(byWkAll).map(a=>avg(a)).filter(x=>x!=null));
+
+    // If both years selected, overlay by week-of-year
+    let lostLabels, lostData;
+    if (S.year !== 'both') {
+      const keys = Object.keys(byWk).filter(k=>k.startsWith(S.year)).sort();
+      lostLabels = thinLabels(keys);
+      lostData = [{label:'Lost Cap %',data:keys.map(k=>byWk[k]?.length?+(avg(byWk[k])*100).toFixed(1):null),borderColor:'#f85149',backgroundColor:'rgba(248,81,73,.1)',fill:true,tension:.3,pointRadius:1,borderWidth:2,spanGaps:true}];
+    } else {
+      const yr2024={}, yr2025={};
+      capRows.forEach(r=>{
+        const wn=getWeekNumber(r.week_start);
+        if(r.year===2024){if(!yr2024[wn])yr2024[wn]=[];if(r.lost_capacity!=null)yr2024[wn].push(r.lost_capacity);}
+        else{if(!yr2025[wn])yr2025[wn]=[];if(r.lost_capacity!=null)yr2025[wn].push(r.lost_capacity);}
+      });
+      const wns=Array.from(new Set([...Object.keys(yr2024),...Object.keys(yr2025)].map(Number))).sort((a,b)=>a-b);
+      lostLabels=wns.map(w=>`Wk ${w}`);
+      lostData=[
+        {label:'2024',data:wns.map(w=>yr2024[w]?.length?+(avg(yr2024[w])*100).toFixed(1):null),borderColor:'#58a6ff',backgroundColor:'transparent',tension:.3,pointRadius:1,borderWidth:2,spanGaps:true,fill:false},
+        {label:'2025',data:wns.map(w=>yr2025[w]?.length?+(avg(yr2025[w])*100).toFixed(1):null),borderColor:'#f0883e',backgroundColor:'transparent',tension:.3,pointRadius:1,borderWidth:2,spanGaps:true,fill:false},
+      ];
+    }
+    mkChart('ch-lost','line',{labels:lostLabels,datasets:lostData},{
+      plugins:{legend:bLeg,tooltip:bTipPct,hLine:{lines:[{y:coAvgLost!=null?(coAvgLost*100):null,color:'#e3b341',label:'Avg'}]}},
+      scales:{x:bScales.x,y:{...bScales.y,ticks:{...bScales.y.ticks,callback:v=>v+'%'}}}
+    });
+    setLegend('leg-lost',[{color:'#e3b341',label:`Co Avg ${coAvgLost!=null?(coAvgLost*100).toFixed(1)+'%':'—'}`}]);
+  }
+
+  // Over 48h
+  if (S.visibleCharts.has('over48')) {
+    const d = buildWeeklyDatasets(S.data.weekly,'pct_over_48h','avg');
+    const coA = coAvg48h;
+    mkChart('ch-over48','line',{labels:d.labels,datasets:d.datasets.map(ds=>({...ds,borderColor:'#bc8cff',backgroundColor:'rgba(188,140,255,.1)',fill:true}))},{
+      plugins:{legend:bLeg,tooltip:bTipPct,hLine:{lines:[{y:coA,color:'#e3b341',label:'Avg'}]}},
+      scales:{x:bScales.x,y:{...bScales.y,ticks:{...bScales.y.ticks,callback:v=>v+'%'}}}
+    });
+    setLegend('leg-over48',[{color:'#e3b341',label:`Co Avg ${coA?.toFixed(1)+'%'||'—'}`}]);
+  }
+
+  // VPE
+  if (S.visibleCharts.has('vpe')) {
+    const sel=filterData(S.data.visits_per_eval), all=filterAll(S.data.visits_per_eval);
+    const gs={},ga={};
+    sel.forEach(r=>{const k=`${r.year}-Q${r.quarter}`;if(!gs[k])gs[k]=[];if(r.visits_per_eval)gs[k].push(r.visits_per_eval);});
+    all.forEach(r=>{const k=`${r.year}-Q${r.quarter}`;if(!ga[k])ga[k]=[];if(r.visits_per_eval)ga[k].push(r.visits_per_eval);});
+    const keys=Object.keys(gs).sort();
+    const coA=avg(Object.keys(ga).flatMap(k=>ga[k]));
+    mkChart('ch-vpe','bar',{labels:keys,datasets:[{label:'Visits/Eval',data:keys.map(k=>gs[k].length?+avg(gs[k]).toFixed(1):null),backgroundColor:'rgba(88,166,255,.5)',borderColor:'#58a6ff',borderWidth:1}]},{
+      plugins:{legend:bLeg,tooltip:bTipPct,hLine:{lines:[{y:coA,color:'#e3b341',label:'Avg'}]}},scales:bScales});
+    setLegend('leg-vpe',[{color:'#e3b341',label:`Co Avg ${coA?.toFixed(1)||'—'}`}]);
+  }
+
+  // Capacity
+  if (S.visibleCharts.has('cap')) {
+    const sel=filterData(S.data.capacity), all=filterAll(S.data.capacity);
+    const gs={}, ga={};
+    sel.forEach(r=>{if(!gs[r.week_start])gs[r.week_start]={m:[],f:[]};if(r.monday_capacity_pct!=null)gs[r.week_start].m.push(r.monday_capacity_pct);if(r.friday_capacity_pct!=null)gs[r.week_start].f.push(r.friday_capacity_pct);});
+    all.forEach(r=>{if(!ga[r.week_start])ga[r.week_start]={m:[],f:[]};if(r.monday_capacity_pct!=null)ga[r.week_start].m.push(r.monday_capacity_pct);if(r.friday_capacity_pct!=null)ga[r.week_start].f.push(r.friday_capacity_pct);});
+    const keys=Object.keys(gs).sort();
+    const compM=avg(Object.values(ga).flatMap(w=>w.m).filter(x=>x!=null))*100;
+    const compF=avg(Object.values(ga).flatMap(w=>w.f).filter(x=>x!=null))*100;
+    mkChart('ch-cap','line',{labels:thinLabels(keys,26),datasets:[
+      {label:'Monday %',data:keys.map(k=>gs[k].m.length?+(avg(gs[k].m)*100).toFixed(1):null),borderColor:'#58a6ff',tension:.3,pointRadius:2,borderWidth:2,spanGaps:true,fill:false},
+      {label:'Friday %',data:keys.map(k=>gs[k].f.length?+(avg(gs[k].f)*100).toFixed(1):null),borderColor:'#f0883e',tension:.3,pointRadius:2,borderWidth:2,spanGaps:true,fill:false},
+    ]},{
+      plugins:{legend:bLeg,tooltip:bTip,hLine:{lines:[{y:compM,color:'#e3b34199',label:'Mon Avg',dash:[3,3]},{y:compF,color:'#f0883e88',label:'Fri Avg',dash:[3,3]}]}},
+      scales:{x:bScales.x,y:{...bScales.y,min:50,max:110,ticks:{...bScales.y.ticks,callback:v=>v+'%'}}}
+    });
+    setLegend('leg-cap',[{color:'#58a6ff',label:'Monday'},{color:'#f0883e',label:'Friday'},{color:'#e3b341',label:'Co Avg'}]);
+  }
+
+  // VPC Dist
+
+}
+
+// ─── RENDER PER-CLINIC CHARTS ─────────────────────────────────────────────────
+function renderPerClinic() {
+  const container = document.getElementById('clinic-charts-container');
+  container.innerHTML = '';
+
+  // Destroy old per-clinic charts
+  Object.keys(CH).filter(k=>k.startsWith('pc-')).forEach(k=>{CH[k].destroy();delete CH[k];});
+
+  const selClinics = ALL_CLINICS.filter(c=>S.clinics.has(c)&&S.regions.has(CR[c]));
+  if (selClinics.length === 0) {
+    container.innerHTML='<div style="color:var(--dim);font-family:DM Mono;padding:20px">No clinics selected.</div>';
+    return;
+  }
+
+  const activeCharts = ['visits','refs','lost','over48','vpe','cap'].filter(c=>S.visibleCharts.has(c));
+  const gridCols = activeCharts.length<=1?'cols-1':activeCharts.length<=2?'cols-2':'cols-3';
+  const chartH = '160px';
+
+  selClinics.forEach(clinic => {
+    const region = CR[clinic];
+    const color  = RC[region];
+    const group = document.createElement('div');
+    group.className = 'clinic-chart-group';
+    // Compute per-clinic averages for the selected period
+    const clinicWeeklyRows = S.data.weekly.filter(r=>r.short_clinic===clinic&&matchYearQtr(r));
+    const cliVisits  = clinicWeeklyRows.map(r=>r.total_visits).filter(x=>x>0);
+    const cliRefs    = clinicWeeklyRows.map(r=>r.referrals).filter(x=>x>0);
+    const cli48h     = clinicWeeklyRows.map(r=>r.pct_over_48h).filter(x=>x!=null);
+    const cliVpw     = cliVisits.length ? (cliVisits.reduce((a,b)=>a+b,0)/clinicWeeklyRows.length) : null;
+    const cliRpw     = cliRefs.length   ? (cliRefs.reduce((a,b)=>a+b,0)/clinicWeeklyRows.length)   : null;
+    // Build summary pill string
+    const avgParts = [];
+    if (cliVpw!=null) avgParts.push(`${cliVpw.toFixed(1)} visits/wk`);
+    if (cliRpw!=null) avgParts.push(`${cliRpw.toFixed(1)} refs/wk`);
+    const avgStr = avgParts.join('  ·  ');
+
+    group.innerHTML = `<div class="clinic-chart-title">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>
+        <span style="font-weight:700;font-size:13px">${clinic}</span>
+        <span style="font-size:10px;font-weight:400;color:var(--dim);font-family:DM Mono">${region}</span>
+        ${avgStr ? `<span style="margin-left:auto;font-family:DM Mono;font-size:11px;font-weight:700;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px">${avgStr}</span>` : ''}
+      </div>
+      <div class="clinic-charts-inner chart-grid ${gridCols}" id="pcg-${clinic.replace(/\s/g,'_')}"></div>`;
+    container.appendChild(group);
+
+    const inner = group.querySelector('.clinic-charts-inner');
+    const clinicRows = S.data.weekly.filter(r=>r.short_clinic===clinic&&matchYearQtr(r));
+
+    // Company averages for benchmark lines
+    const coV   = companyAvgVal('total_visits','sum');
+    const coR   = companyAvgVal('referrals','sum');
+    const co48  = companyAvgVal('pct_over_48h','avg');
+    const _cWks = {}; S.data.capacity.forEach(r=>{if(!_cWks[r.week_start])_cWks[r.week_start]=[];if(r.lost_capacity!=null)_cWks[r.week_start].push(r.lost_capacity);});
+    const coLost = avg(Object.values(_cWks).map(a=>avg(a)).filter(x=>x!=null));
+
+    if (S.visibleCharts.has('visits')) {
+      const card = mkPCCard(`pc-visits-${clinic}`,`Visits/Week`,chartH);
+      inner.appendChild(card.el);
+      const d = buildWeeklyDatasets(S.data.weekly,'total_visits','sum',clinic);
+      mkChart(card.id,'line',{labels:d.labels,datasets:d.datasets.map(ds=>({...ds,borderColor:color,backgroundColor:color+'22',fill:true}))},{
+        plugins:{legend:bLeg,tooltip:bTip,datalabels:dlCfg('line',false),hLine:{lines:[{y:coV,color:'#9a6700',label:'Co'}]}},scales:bScales});
+    }
+    if (S.visibleCharts.has('refs')) {
+      const card = mkPCCard(`pc-refs-${clinic}`,'Referrals/Week',chartH);
+      inner.appendChild(card.el);
+      const d = buildWeeklyDatasets(S.data.weekly,'referrals','sum',clinic);
+      mkChart(card.id,'bar',{labels:d.labels,datasets:d.datasets.map(ds=>({...ds,type:'bar',backgroundColor:color+'88',borderColor:color,borderWidth:1}))},{
+        plugins:{legend:bLeg,tooltip:bTip,datalabels:dlCfg('bar',false),hLine:{lines:[{y:coR,color:'#9a6700',label:'Co'}]}},scales:bScales});
+    }
+    if (S.visibleCharts.has('lost')) {
+      const capRows = S.data.capacity.filter(r=>r.short_clinic===clinic&&matchYearQtr(r));
+      const card = mkPCCard(`pc-lost-${clinic}`,'Lost Capacity %',chartH);
+      inner.appendChild(card.el);
+      const byWk={};
+      capRows.forEach(r=>{if(!byWk[r.week_start])byWk[r.week_start]=[];if(r.lost_capacity!=null)byWk[r.week_start].push(r.lost_capacity);});
+      const keys=Object.keys(byWk).sort();
+      mkChart(card.id,'line',{labels:thinLabels(keys),datasets:[{label:'Lost Cap %',data:keys.map(k=>byWk[k].length?+(avg(byWk[k])*100).toFixed(1):null),borderColor:'#cf222e',backgroundColor:'rgba(207,34,46,.1)',fill:true,tension:.3,pointRadius:1,borderWidth:2,spanGaps:true}]},{
+        plugins:{legend:bLeg,tooltip:bTipPct,datalabels:dlCfg('line',true),hLine:{lines:[{y:coLost!=null?+(coLost*100).toFixed(1):null,color:'#9a6700',label:'Co'}]}},
+        scales:{x:bScales.x,y:{...bScales.y,ticks:{...bScales.y.ticks,callback:v=>v+'%'}}}});
+    }
+    if (S.visibleCharts.has('over48')) {
+      const card = mkPCCard(`pc-48h-${clinic}`,'% Notes >48h',chartH);
+      inner.appendChild(card.el);
+      const d = buildWeeklyDatasets(S.data.weekly,'pct_over_48h','avg',clinic);
+      mkChart(card.id,'line',{labels:d.labels,datasets:d.datasets.map(ds=>({...ds,borderColor:'#8250df',backgroundColor:'rgba(130,80,223,.1)',fill:true}))},{
+        plugins:{legend:bLeg,tooltip:bTipPct,datalabels:dlCfg('line',true),hLine:{lines:[{y:co48,color:'#9a6700',label:'Co'}]}},
+        scales:{x:bScales.x,y:{...bScales.y,ticks:{...bScales.y.ticks,callback:v=>v+'%'}}}});
+    }
+    if (S.visibleCharts.has('vpe')) {
+      const vpcRows = S.data.visits_per_case.filter(r=>r.short_clinic===clinic&&matchYearQtr(r));
+      const card = mkPCCard(`pc-vpe-${clinic}`,'Visits/Case (Discharged)',chartH);
+      inner.appendChild(card.el);
+      const ks=vpcRows.map(r=>`${r.year}-Q${r.quarter}`);
+      const vals=vpcRows.map(r=>r.avg_visits_per_case);
+      mkChart(card.id,'bar',{labels:ks,datasets:[{label:'V/Case',data:vals,backgroundColor:color+'88',borderColor:color,borderWidth:1}]});
+    }
+    if (S.visibleCharts.has('cap')) {
+      const capRows = S.data.capacity.filter(r=>r.short_clinic===clinic&&matchYearQtr(r));
+      const card = mkPCCard(`pc-cap-${clinic}`,'Capacity Mon/Fri',chartH);
+      inner.appendChild(card.el);
+      const byWk={};
+      capRows.forEach(r=>{if(!byWk[r.week_start])byWk[r.week_start]={m:[],f:[]};if(r.monday_capacity_pct!=null)byWk[r.week_start].m.push(r.monday_capacity_pct);if(r.friday_capacity_pct!=null)byWk[r.week_start].f.push(r.friday_capacity_pct);});
+      const keys=Object.keys(byWk).sort();
+      mkChart(card.id,'line',{labels:thinLabels(keys,26),datasets:[
+        {label:'Mon',data:keys.map(k=>byWk[k].m.length?+(avg(byWk[k].m)*100).toFixed(1):null),borderColor:'#58a6ff',tension:.3,pointRadius:1,borderWidth:2,spanGaps:true,fill:false},
+        {label:'Fri',data:keys.map(k=>byWk[k].f.length?+(avg(byWk[k].f)*100).toFixed(1):null),borderColor:'#f0883e',tension:.3,pointRadius:1,borderWidth:2,spanGaps:true,fill:false},
+      ]},{scales:{x:bScales.x,y:{...bScales.y,min:50,max:110,ticks:{...bScales.y.ticks,callback:v=>v+'%'}}}});
+    }
+  });
+}
+
+function mkPCCard(id, title, height='160px') {
+  const el = document.createElement('div');
+  el.style.minWidth='0';
+  el.innerHTML=`<div style="font-size:10px;color:var(--dim);margin-bottom:5px;font-family:DM Mono">${title}</div><div style="position:relative;height:${height}"><canvas id="${id}"></canvas></div>`;
+  return {el, id};
+}
+function mkPCChart(id, type, data, color, pct=false) {
+  if (CH[id]) {CH[id].destroy();delete CH[id];}
+  const el=document.getElementById(id); if(!el)return;
+  const yScale = pct ? {...bScales.y,ticks:{...bScales.y.ticks,callback:v=>v+'%'}} : bScales.y;
+  CH[id] = new Chart(el.getContext('2d'),{type,data,options:{
+    responsive:true, maintainAspectRatio:false,
+    layout:{padding:{top:16}},
+    plugins:{
+      legend:{display:data.datasets.length>1,labels:{color:'#656d76',font:{family:'DM Mono',size:9},boxWidth:8,padding:6}},
+      tooltip:bTip,
+      datalabels:dlCfg(type,pct)
+    },
+    scales:{x:bScales.x,y:yScale}
+  }});
+}
+
+// ─── CARD VISIBILITY ──────────────────────────────────────────────────────────
+function updateCardVisibility() {
+  const map={visits:'card-visits',refs:'card-refs',lost:'card-lost',over48:'card-over48',vpe:'card-vpe',cap:'card-cap'};
+  // CPT section visibility handled by renderCPTChart() itself
+  Object.entries(map).forEach(([key,id])=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.classList.toggle('hidden',!S.visibleCharts.has(key));
+  });
+  // Reflow grid columns based on visible cards (excluding vpcdist from count)
+  const grid=document.getElementById('trend-grid');
+  const vcount=S.visibleCharts.size;
+  grid.className='chart-grid '+(vcount<=1?'cols-1':vcount<=3?'cols-2':'cols-2');
+}
+
+// ─── COMPARISON TABLES ────────────────────────────────────────────────────────
+const COL_DEFS = [
+  {key:'short_clinic',    label:'Clinic',        fmt:r=>r.short_clinic,     num:false, bar:false},
+  {key:'region',          label:'Region',        fmt:r=>r.region,           num:false, bar:false, color:true},
+  {key:'visits_per_week', label:'Visits/Wk',    fmt:r=>fmt(r.visits_per_week),  num:true,bar:true,barColor:'#58a6ff'},
+  {key:'refs_per_week',   label:'Refs/Wk',      fmt:r=>fmt(r.refs_per_week),    num:true,bar:true,barColor:'#3fb950'},
+  {key:'avg_visits_per_case', label:'Visits/Case', fmt:r=>fmt(r.avg_visits_per_case), num:true,bar:true,barColor:'#bc8cff'},
+  {key:'monday_fill_rate', label:'Mon Fill %',   fmt:r=>r.monday_fill_rate!=null?r.monday_fill_rate.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#58a6ff',pctBar:true},
+  {key:'fill_rate',       label:'Fri Fill %',   fmt:r=>r.fill_rate!=null?r.fill_rate.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#3fb950',pctBar:true},
+  {key:'lost_capacity_pct',label:'Lost Cap %',  fmt:r=>r.lost_capacity_pct!=null?r.lost_capacity_pct.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#f85149',pctBar:true, title:'Mon% − Fri%'},
+  {key:'ther_ex_pct_avg', label:'Ther Ex %',    fmt:r=>r.ther_ex_pct_avg!=null?r.ther_ex_pct_avg.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#e3b341',pctBar:true},
+  {key:'avg_signoff',     label:'Sign-Off days',fmt:r=>fmt(r.avg_signoff,2),     num:true,bar:true,barColor:'#f0883e'},
+  {key:'pct_over_48h',    label:'% >48h',       fmt:r=>r.pct_over_48h!=null?r.pct_over_48h.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#f85149',pctBar:true},
+];
+
+const T_COL_DEFS = [
+  {key:'therapist_clean', label:'Therapist',    fmt:r=>r.therapist_clean, num:false,bar:false},
+  {key:'short_clinic',    label:'Clinic',       fmt:r=>r.short_clinic,    num:false,bar:false},
+  {key:'region',          label:'Region',       fmt:r=>r.region,          num:false,bar:false,color:true},
+  {key:'total_visits',    label:'Total Visits', fmt:r=>r.total_visits?.toLocaleString()||'—', num:true,bar:false},
+  {key:'visits_per_week', label:'Visits/Wk',   fmt:r=>fmt(r.visits_per_week),  num:true,bar:true,barColor:'#58a6ff'},
+  {key:'evals_per_week',  label:'Evals/Wk (Initial)',    fmt:r=>fmt(r.evals_per_week),   num:true,bar:true,barColor:'#3fb950'},
+
+  {key:'visits_per_eval', label:'Visits/Eval', fmt:r=>fmt(r.visits_per_eval),  num:true,bar:true,barColor:'#bc8cff'},
+  {key:'mon_fill_rate',   label:'Mon Fill %',  fmt:r=>r.mon_fill_rate!=null?r.mon_fill_rate.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#58a6ff',pctBar:true},
+  {key:'avg_fill_rate',   label:'Fri Fill %',  fmt:r=>r.avg_fill_rate!=null?r.avg_fill_rate.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#3fb950',pctBar:true},
+  {key:'lost_cap_pct',    label:'Lost Cap %',  fmt:r=>r.lost_cap_pct!=null?r.lost_cap_pct.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#f85149',pctBar:true},
+  {key:'ther_ex_pct_avg', label:'Ther Ex %',   fmt:r=>r.ther_ex_pct_avg!=null?r.ther_ex_pct_avg.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#e3b341',pctBar:true},
+  {key:'avg_signoff',     label:'Sign-Off',    fmt:r=>fmt(r.avg_signoff,2), num:true,bar:true,barColor:'#f0883e'},
+  {key:'pct_over_48h',    label:'% >48h',      fmt:r=>r.pct_over_48h!=null?r.pct_over_48h.toFixed(1)+'%':'—', num:true,bar:true,barColor:'#f85149',pctBar:true},
+];
+
+function buildTable(theadId, tbodyId, rows, colDefs, sortState, onSort) {
+  const cAvgs={};
+  colDefs.filter(c=>c.bar).forEach(c=>{
+    const vals=rows.map(r=>parseFloat(r[c.key])).filter(v=>!isNaN(v));
+    cAvgs[c.key]=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  });
+  const maxVals={};
+  colDefs.filter(c=>c.bar&&!c.pctBar).forEach(c=>{
+    maxVals[c.key]=Math.max(...rows.map(r=>parseFloat(r[c.key])||0),0.001);
+  });
+
+  const thead=document.getElementById(theadId); thead.innerHTML='';
+  const hr=document.createElement('tr');
+  colDefs.forEach(c=>{
+    const th=document.createElement('th');
+    th.textContent=c.label; th.dataset.key=c.key;
+    if(sortState.col===c.key){th.classList.add('sorted');th.dataset.dir=sortState.dir===1?'↑':'↓';}
+    th.addEventListener('click',()=>onSort(c.key));
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+
+  const tbody=document.getElementById(tbodyId); tbody.innerHTML='';
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    colDefs.forEach(c=>{
+      const td=document.createElement('td');
+      const raw=parseFloat(row[c.key]);
+      if(c.color){
+        td.innerHTML=`<span style="color:${RC[row[c.key]]||'#8b949e'};font-weight:600">${c.fmt(row)}</span>`;
+      } else if(c.bar&&c.pctBar){
+        const v=parseFloat(row[c.key])||0;
+        const co=cAvgs[c.key];
+        const neg=c.key==='lost_visit_pct'||c.key==='pct_over_48h'||c.key==='avg_signoff'||c.key==='lost_capacity_pct';
+        const bcolor=co!=null?(neg?(v>co?'#f85149':'#3fb950'):(v<co?'#f85149':'#3fb950')):c.barColor;
+        td.innerHTML=`<span class="cell-bar"><span class="mini-bar" style="width:${Math.min(v*.7,70)}px;background:${bcolor};opacity:.7"></span>${c.fmt(row)}</span>`;
+      } else if(c.bar){
+        const v=raw||0,mx=maxVals[c.key]||1;
+        const co=cAvgs[c.key];
+        const bcolor=co!=null?(c.key==='avg_signoff'?(v>co?'#f85149':'#3fb950'):(v<co?'#f85149':'#3fb950')):c.barColor;
+        td.innerHTML=`<span class="cell-bar"><span class="mini-bar" style="width:${Math.max(Math.round(v/mx*60),2)}px;background:${bcolor};opacity:.7"></span>${c.fmt(row)}</span>`;
+      } else {
+        td.textContent=c.fmt(row);
+        if(!c.num)td.style.color=RC[row.region]||'var(--dim)';
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function aggByKey(rows, keyField) {
+  // All rate metrics are recomputed from raw counts, not by averaging quarterly
+  // rates. This gives correct results across quarters and across multiple clinics
+  // (e.g. a therapist who works at two clinics).
+  const map={};
+  const getKey = typeof keyField==='function' ? keyField : r=>r[keyField];
+  rows.forEach(r=>{
+    const k=getKey(r);
+    if(!map[k]) map[k]={
+      ...r,
+      total_visits:0, total_evals:0, over_48h_count:0, total_with_signoff:0,
+      _signoff_sum:0, _signoff_count:0, _unique_weeks:new Set(),
+      _rw:[], _fri:[], _mon:[], _lcp:[], _lv:[],
+      _total_units:0, _units_97110:0,
+    };
+    const m=map[k];
+    m.total_visits       += r.total_visits       || 0;
+    m.total_evals        += (r.total_evals || r.evals || 0);  // therapist_weekly uses 'evals'
+    m.over_48h_count     += r.over_48h_count     || 0;
+    m.total_with_signoff += r.total_with_signoff || 0;
+    m._total_units       += r.total_units        || 0;
+    m._units_97110       += r.units_97110        || 0;
+    if(r.signoff_sum!=null) { m._signoff_sum += r.signoff_sum; m._signoff_count += (r.signoff_count || r.total_with_signoff || 0); }
+    else if(r.avg_signoff!=null && r.signoff_count>0) { m._signoff_sum += r.avg_signoff * r.signoff_count; m._signoff_count += r.signoff_count; }
+    if(r.week_start) m._unique_weeks.add(r.week_start);
+    if(r.refs_per_week!=null)    m._rw.push(r.refs_per_week);
+    if(r.avg_fill_rate!=null)    m._fri.push(r.avg_fill_rate);
+    if(r.fill_rate!=null)        m._fri.push(r.fill_rate);
+    if(r.mon_fill_rate!=null)    m._mon.push(r.mon_fill_rate);
+    if(r.monday_fill_rate!=null) m._mon.push(r.monday_fill_rate);
+    if(r.lost_capacity_pct!=null)m._lcp.push(r.lost_capacity_pct);
+    if(r.lost_cap_pct!=null)     m._lcp.push(r.lost_cap_pct);
+    if(r.lost_visit_pct!=null)   m._lv.push(r.lost_visit_pct);
+  });
+  return Object.values(map).map(m=>{
+    const wks = m._unique_weeks.size > 0 ? m._unique_weeks.size : (m.weeks_active || 1);
+    return {
+      ...m,
+      weeks_active:      wks,
+      visits_per_week:   wks>0 ? +(m.total_visits/wks).toFixed(1)  : null,
+      evals_per_week:    wks>0 ? +(m.total_evals/wks).toFixed(1)   : null,
+      visits_per_eval:   m.total_evals>0 ? +(m.total_visits/m.total_evals).toFixed(1) : null,
+      avg_signoff:       m._signoff_count>0 ? +(m._signoff_sum/m._signoff_count).toFixed(2) : null,
+      pct_over_48h:      m.total_with_signoff>0 ? m.over_48h_count/m.total_with_signoff*100 : null,
+      ther_ex_pct_avg:   m._total_units>0 ? +(m._units_97110/m._total_units*100).toFixed(1) : null,
+      refs_per_week:     avg(m._rw),
+      fill_rate:         avg(m._fri),
+      avg_fill_rate:     avg(m._fri),
+      monday_fill_rate:  avg(m._mon),
+      mon_fill_rate:     avg(m._mon),
+      lost_capacity_pct: avg(m._lcp),
+      lost_cap_pct:      avg(m._lcp),
+    };
+  });
+}
+
+function sortRows(rows, col, dir) {
+  return [...rows].sort((a,b)=>{
+    const av=a[col]??'', bv=b[col]??'';
+    if(typeof av==='string')return dir*av.localeCompare(bv);
+    return dir*((av??-999)-(bv??-999));
+  });
+}
+
+function renderClinicTable() {
+  let rows = aggByKey(filterData(S.data.clinic_summary), 'short_clinic');
+  // Attach avg_visits_per_case from discharge cohort table
+  const vpcMap = {};
+  filterData(S.data.visits_per_case).forEach(r => {
+    const k = r.short_clinic;
+    if (!vpcMap[k]) vpcMap[k] = [];
+    if (r.avg_visits_per_case) vpcMap[k].push(r.avg_visits_per_case);
+  });
+  rows.forEach(r => {
+    r.avg_visits_per_case = vpcMap[r.short_clinic]?.length
+      ? +(vpcMap[r.short_clinic].reduce((a,b)=>a+b,0)/vpcMap[r.short_clinic].length).toFixed(1)
+      : null;
+  });
+  rows = sortRows(rows, S.clinicSort.col, S.clinicSort.dir);
+  buildTable('clinic-thead','clinic-tbody',rows,COL_DEFS,S.clinicSort, key=>{
+    S.clinicSort.col===key?S.clinicSort.dir*=-1:(S.clinicSort.col=key,S.clinicSort.dir=-1);
+    renderClinicTable();
+  });
+}
+
+
+// ─── CPT MIX CHART ──────────────────────────────────────────────────────────
+let _cptChart = null;
+
+function buildCPTTherapistSelector() {
+  const sel = document.getElementById('cpt-therapist-sel');
+  if (!sel) return;
+  const rows = (S.data.cpt_monthly || []).filter(r =>
+    S.clinics.has(r.short_clinic) && S.regions.has(r.region) &&
+    (S.year === 'all' || r.year === parseInt(S.year))
+  );
+  const names = [...new Set(rows.map(r => r.therapist_clean))].sort();
+  const prev = sel.value;
+  sel.innerHTML = names.map(n => `<option value="${n}"${n===prev?' selected':''}>${n}</option>`).join('');
+  if (!names.includes(sel.value) && names.length) sel.value = names[0];
+}
+
+function renderCPTChart() {
+  try {
+  try {
+  const section = document.getElementById('cpt-section');
+  if (!section) return;
+  const visible = S.visibleCharts.has('cpt');
+  section.style.display = visible ? '' : 'none';
+  if (!visible) return;
+
+  buildCPTTherapistSelector();
+  const sel = document.getElementById('cpt-therapist-sel');
+  const therapist = sel ? sel.value : '';
+  if (!therapist) return;
+
+  const meta = S.data.cpt_meta || {};
+  const codes = meta.codes || ['97112','97140','97530','97535','97110','Other'];
+  const labels_map = meta.labels || {};
+  const colors = meta.colors || {};
+
+  // Filter + sort rows for this therapist
+  let rows = (S.data.cpt_monthly || []).filter(r =>
+    r.therapist_clean === therapist &&
+    S.clinics.has(r.short_clinic) &&
+    S.regions.has(r.region) &&
+    (S.year === 'all' || r.year === parseInt(S.year))
+  ).sort((a,b) => a.year !== b.year ? a.year-b.year : a.month-b.month);
+
+  // Aggregate by month (sum raw units then recompute pcts)
+  const byMonth = {};
+  rows.forEach(r => {
+    if (!byMonth[r.month_label]) byMonth[r.month_label] = {total:0, raw:{}};
+    byMonth[r.month_label].total += r.total_units;
+    codes.forEach(c => {
+      byMonth[r.month_label].raw[c] = (byMonth[r.month_label].raw[c]||0) + (r[c]||0) * r.total_units / 100;
+    });
+  });
+
+  const monthLabels = Object.keys(byMonth).sort();
+  const datasets = codes.map(code => ({
+    label: labels_map[code] || code,
+    data: monthLabels.map(m => {
+      const d = byMonth[m];
+      return d.total > 0 ? +((d.raw[code]||0) / d.total * 100).toFixed(1) : 0;
+    }),
+    backgroundColor: colors[code] || '#888',
+    borderWidth: 0,
+  }));
+
+  const fmtLabels = monthLabels.map(ml => {
+    const [y,mo] = ml.split('-');
+    return new Date(+y,+mo-1,1).toLocaleString('default',{month:'short'})+' \''+y.slice(2);
+  });
+
+  if (_cptChart) { _cptChart.destroy(); _cptChart = null; }
+  const ctx = document.getElementById('ch-cpt');
+  if (!ctx) return;
+
+  _cptChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: fmtLabels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: {
+          stacked: true,
+          ticks: { color:'#8b949e', font:{family:'DM Mono',size:9}, maxRotation:45 },
+          grid: { color:'rgba(208,215,222,0.08)' },
+        },
+        y: {
+          stacked: true, min:0, max:100,
+          ticks: { color:'#8b949e', font:{family:'DM Mono',size:9}, callback: v => v+'%' },
+          grid: { color:'rgba(208,215,222,0.08)' },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}%` },
+          backgroundColor:'rgba(22,27,34,0.95)',titleColor:'#e6edf3',bodyColor:'#8b949e',
+          borderColor:'#30363d',borderWidth:1,
+          titleFont:{family:'DM Mono',size:11},bodyFont:{family:'DM Mono',size:11},
+        },
+        datalabels: {
+          display: c => c.dataset.data[c.dataIndex] >= 6,
+          formatter: v => v.toFixed(1)+'%',
+          color:'#fff', font:{family:'DM Mono',size:9,weight:'bold'},
+          anchor:'center', align:'center',
+        },
+      },
+    },
+  });
+
+  // Custom legend
+  const legendEl = document.getElementById('cpt-legend');
+  if (legendEl) {
+    legendEl.innerHTML = codes.map(c =>
+      `<span style="display:flex;align-items:center;gap:5px;">
+        <span style="width:11px;height:11px;border-radius:2px;background:${colors[c]||'#888'};flex-shrink:0;"></span>
+        <span style="color:#8b949e;">${labels_map[c]||c}</span>
+      </span>`
+    ).join('');
+  }
+  } catch(e) { console.error('CPT chart error:', e); }
+  } catch(e) { console.error("CPT chart error:", e); }
+}
+function renderTherapistTable() {
+  // Step 1: use therapist_weekly (has week_start) to get correct visits/week
+  // via aggByKey's _unique_weeks Set — correctly handles multi-clinic therapists
+  // and all-quarters view without double-counting overlapping weeks.
+  const twRows = (S.data.therapist_weekly || []).filter(r => {
+    if (!matchYearQtr(r)) return false;
+    if (!S.clinics.has(r.short_clinic)) return false;
+    if (!S.regions.has(r.region)) return false;
+    return true;
+  });
+  // Aggregate weekly rows by therapist → gives correct total_visits and unique weeks
+  const weeklyAgg = aggByKey(twRows, r => r.therapist_clean);
+
+  // Step 2: pull the per-therapist quarterly metrics (signoff, ther_ex, fill_rate etc)
+  // from therapist_summary — these don't need weekly dedup
+  const summaryRows = filterData(S.data.therapist_summary);
+  const summaryAgg  = aggByKey(summaryRows, r => r.therapist_clean);
+  const summaryMap  = new Map(summaryAgg.map(r => [r.therapist_clean, r]));
+
+  // Step 3: merge weekly-derived metrics onto summary metrics
+  let rows = weeklyAgg.map(w => {
+    const s = summaryMap.get(w.therapist_clean) || {};
+    return {
+      ...s,                         // all summary fields (signoff, ther_ex, fill_rate, etc)
+      therapist_clean: w.therapist_clean,
+      total_visits:    w.total_visits,
+      total_evals:     (w.total_evals || w.evals || 0) || s.total_evals || 0,
+      weeks_active:    w.weeks_active,
+      visits_per_week: w.visits_per_week,
+      evals_per_week:  w.evals_per_week,
+      visits_per_eval: w.visits_per_eval,
+    };
+  });
+
+  // Step 4: primary clinic = clinic with most visits in selected period
+  const clinicVisits = {};
+  twRows.forEach(r => {
+    const k = r.therapist_clean;
+    if (!clinicVisits[k]) clinicVisits[k] = {};
+    clinicVisits[k][r.short_clinic] = (clinicVisits[k][r.short_clinic] || 0) + r.total_visits;
+  });
+  rows.forEach(r => {
+    const cv = clinicVisits[r.therapist_clean];
+    if (cv) {
+      const primary = Object.entries(cv).sort((a,b)=>b[1]-a[1])[0];
+      r.short_clinic = primary[0];
+      r.region       = CR[primary[0]] || r.region;
+    }
+  });
+
+  rows = rows.filter(r => r.total_visits >= 20);
+  const search = S.therapistSearch.toLowerCase().trim();
+  if (search) rows = rows.filter(r => (r.therapist_clean||'').toLowerCase().includes(search));
+  rows = sortRows(rows, S.therapistSort.col, S.therapistSort.dir);
+  buildTable('t-thead','t-tbody', rows, T_COL_DEFS, S.therapistSort, key => {
+    S.therapistSort.col===key ? S.therapistSort.dir*=-1 : (S.therapistSort.col=key, S.therapistSort.dir=-1);
+    renderTherapistTable();
+  });
+}
+
+// ─── FILTER UI ────────────────────────────────────────────────────────────────
+function buildFilterUI() {
+  // ── Year dropdown — built dynamically from years present in data ──
+  const yrSel = document.getElementById('sel-year');
+  yrSel.innerHTML = '';
+  const allYears = [...new Set([
+    ...(S.data.weekly||[]).map(r=>r.year),
+    ...(S.data.capacity||[]).map(r=>r.year),
+  ])].filter(Boolean).map(Number).sort();
+  // "All Years" option when multiple years exist
+  if (allYears.length > 1) {
+    const opt = document.createElement('option');
+    opt.value = 'both'; opt.textContent = 'All Years';
+    yrSel.appendChild(opt);
+  }
+  allYears.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = String(y); opt.textContent = String(y);
+    yrSel.appendChild(opt);
+  });
+  // Default: most recent year
+  const defaultYear = String(Math.max(...allYears));
+  if (!allYears.map(String).includes(S.year) && S.year !== 'both') {
+    S.year = defaultYear;
+  }
+  yrSel.value = S.year;
+
+  // Default quarter to current calendar quarter
+  const _nowQ = String(Math.ceil((new Date().getMonth()+1)/3));
+  const qSel = document.getElementById('sel-qtr');
+  if (qSel && !S.qtr) { S.qtr = _nowQ; qSel.value = _nowQ; }
+  else if (qSel) { qSel.value = S.qtr; }
+
+  // Region buttons
+  const rb=document.getElementById('region-btns');
+  ['Blue','Orange','Green','Red','Purple'].forEach(r=>{
+    const btn=document.createElement('button');
+    btn.className=`rbtn ${r} on`; btn.dataset.r=r; btn.textContent=r;
+    btn.addEventListener('click',()=>{
+      if(S.regions.has(r)){
+        if(S.regions.size===1)return;
+        S.regions.delete(r); btn.classList.remove('on');
+        ALL_CLINICS.filter(c=>CR[c]===r).forEach(c=>S.clinics.delete(c));
+      } else {
+        S.regions.add(r); btn.classList.add('on');
+        ALL_CLINICS.filter(c=>CR[c]===r).forEach(c=>S.clinics.add(c));
+      }
+      syncClinicBtns(); update();
+    });
+    rb.appendChild(btn);
+  });
+
+  // Clinic checkboxes
+  const cb=document.getElementById('clinic-btns');
+  ALL_CLINICS.forEach(clinic=>{
+    const btn=document.createElement('button');
+    btn.className=`cbtn ${CR[clinic]} on`; btn.textContent=clinic; btn.dataset.c=clinic;
+    btn.addEventListener('click',()=>{
+      S.clinics.has(clinic)?S.clinics.delete(clinic):S.clinics.add(clinic);
+      syncClinicBtns(); update();
+    });
+    cb.appendChild(btn);
+  });
+}
+
+function syncClinicBtns() {
+  document.querySelectorAll('.cbtn').forEach(btn=>{
+    btn.style.opacity=S.regions.has(CR[btn.dataset.c])?'1':'0.3';
+    btn.classList.toggle('on',S.clinics.has(btn.dataset.c));
+  });
+}
+
+function updateSummary() {
+  const yr=S.year==='both'?'Both Years':S.year;
+  const qr=S.qtr==='all'?'All Qtrs':'Q'+S.qtr;
+  document.getElementById('fsummary').textContent=`${S.clinics.size} Clinics · ${yr} · ${qr}`;
+}
+
+// ─── MAIN UPDATE ──────────────────────────────────────────────────────────────
+function update() {
+  updateSummary();
+  computeKPIs();
+  updateCardVisibility();
+  if (S.mode==='combined') {
+    document.getElementById('combined-charts').style.display='';
+    document.getElementById('per-clinic-charts').style.display='none';
+    renderCombined();
+  } else {
+    document.getElementById('combined-charts').style.display='none';
+    document.getElementById('per-clinic-charts').style.display='';
+    renderPerClinic();
+  }
+  renderClinicTable();
+  renderTherapistTable();
+  renderCPTChart();
+}
+
+// ─── EVENTS ───────────────────────────────────────────────────────────────────
+document.getElementById('sel-year').addEventListener('change',e=>{S.year=e.target.value;update();});
+document.getElementById('sel-qtr').addEventListener('change',e=>{S.qtr=e.target.value;update();});
+document.getElementById('sel-all').addEventListener('click',()=>{
+  ALL_CLINICS.filter(c=>S.regions.has(CR[c])).forEach(c=>S.clinics.add(c));
+  syncClinicBtns(); update();
+});
+document.getElementById('sel-none').addEventListener('click',()=>{S.clinics.clear();syncClinicBtns();update();});
+
+document.getElementById('chart-toggles').addEventListener('click',e=>{
+  const btn=e.target.closest('.chtbtn'); if(!btn)return;
+  const ch=btn.dataset.chart;
+  S.visibleCharts.has(ch)?S.visibleCharts.delete(ch):S.visibleCharts.add(ch);
+  btn.classList.toggle('on',S.visibleCharts.has(ch));
+  updateCardVisibility();
+  if(S.mode==='combined')renderCombined();
+  else renderPerClinic();
+  renderCPTChart();
+});
+
+document.getElementById('labels-toggle').addEventListener('click', function() {
+  S.showLabels = !S.showLabels;
+  this.classList.toggle('on', S.showLabels);
+  this.textContent = (S.showLabels ? '✓ ' : '') + 'Labels';
+  // Re-render — dlCfg() reads S.showLabels so all charts pick it up
+  if (S.mode==='combined') renderCombined();
+  else renderPerClinic();
+});
+
+document.querySelectorAll('[data-mode]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    S.mode=btn.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b===btn));
+    document.getElementById('mode-info').textContent=
+      S.mode==='combined'?'Aggregates selected clinics into one chart':'Each clinic gets its own chart panel';
+    update();
+  });
+});
+
+document.getElementById('t-search').addEventListener('input',e=>{S.therapistSearch=e.target.value;renderTherapistTable();});
+document.getElementById('cpt-therapist-sel')?.addEventListener('change',()=>renderCPTChart());
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init(data) {
+  S.data = data;
+  try {
+    buildFilterUI();
+    update();
+  } catch(e) {
+    console.error('Dashboard init error:', e);
+  }
+  document.getElementById('loading').style.display='none';
+}
+</script>
+<script>
+// ─── CSV UPLOAD SYSTEM ────────────────────────────────────────────────────────
+// Strategy: parse uploaded CSVs into raw row objects, deduplicate against
+// already-loaded raw rows (stored in S.rawRows), then re-aggregate all
+// summary tables (weekly, clinic_summary, therapist_summary, etc.) from scratch.
+// This means uploading the same file twice is always safe.
+
+// Raw row stores — keyed by composite dedup string
+// Populated on init() from the embedded data, then extended by uploads.
+// NOTE: We reconstruct raw rows from the aggregated weekly data on init
+// because the dashboard ships pre-aggregated JSON (not raw rows).
+// On upload we store raw rows and re-aggregate from them.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPLOAD SYSTEM — Week-level replacement strategy
+//
+// When a CSV is uploaded, we first identify every (clinic, week_start)
+// combination present in that file, then WIPE all previously stored raw rows
+// for those exact combinations before loading the new rows.
+//
+// This means:
+//   • Upload Monday's export  → stored as-is
+//   • Upload Tuesday's updated export for the same week
+//       → old rows for that clinic+week are deleted first
+//       → new rows (with additions, edits, deletions reflected) are loaded
+//       → charts show Tuesday's accurate numbers
+//   • Upload the identical file again → same rows go in again (net zero change)
+//
+// The "rows replaced" count in the UI tells you how many old rows were wiped
+// before the new ones were loaded — useful to confirm a re-upload was processed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const UPLOAD_STATE = {
+  // rawSched: Scheduled Checked-In — primary visit source
+  // Key: "clinic|caseTitle|YYYY-MM-DD|treatingTherapist"
+  rawSched:    new Map(),
+  // rawDocVisits: Documented Visits — used for sign-off metrics only
+  // Key: "clinic|caseName|YYYY-MM-DD|visitType|documentingTherapist"
+  rawDocVisits: new Map(),
+  // rawRefs: referrals
+  // Key: "clinic|caseName|YYYY-MM-DD"
+  rawRefs:     new Map(),
+  initialized: false,
+};
+
+
+// ── Scheduled visit name cleaning ────────────────────────────────────────────
+const KNOWN_CLINIC_SUFFIXES = new Set([
+  'Acton','Bristol','Fox Hill Village','Grafton','Harvard','Holliston','Leominster',
+  'Mansfield','Medway','Millis','Oxford','Pepperell','Plainville','Portsmouth',
+  'Uxbridge','Wellesley','Worcester','Fall River','Amesbury','Groveland','Salisbury',
+  'Groton','Medfield','FHV','MILL','Sturdy','Bristol New',
+]);
+
+function cleanSchedName(raw) {
+  if (!raw) return '';
+  let n = raw.trim();
+  // Strip " - ClinicName" suffix (only known clinic names)
+  n = n.replace(/\s*-\s*([\w ]+)\s*$/, (match, suffix) => {
+    return KNOWN_CLINIC_SUFFIXES.has(suffix.trim()) ? '' : match;
+  });
+  // Strip credential suffixes — longest patterns first
+  const credPats = [
+    /\s+PT,?\s*DPT,?\s*OCS\b.*/i,
+    /\s+PT,?\s*DPT\b.*/i,
+    /\s+PT\s+MSPT\b.*/i,
+    /,?\s*\bPT\b.*/i,
+    /\s+\bPTA\b.*/i,
+    /\s+\bDPT\b.*/i,
+    /\s+OTR[/L]*\b.*/i,
+    /,?\s*\bOTRL\b.*/i,
+    /\s+\bSPT\b.*/i,
+    /\s+\bDRP\b.*/i,
+  ];
+  for (const pat of credPats) n = n.replace(pat, '').trim();
+  return n.trim();
+}
+// ── Utility: clinic name normalisation (mirrors build_data.py) ───────────────
+function extractClinic(cn) {
+  if (!cn) return '';
+  for (const p of [
+    'Connections Physical Therapy - ',
+    'Holmes Physical Therapy - ',
+    'Dion Physical Therapy - ',       // Fall River — prior to Connections rebrand
+  ])
+    if (cn.includes(p)) return cn.replace(p, '');
+  if (cn.includes('Live Free Physical Therapy')) return 'Groton';
+  if (cn.includes('Medfield Orthopedic')) return 'Medfield';
+  return cn.trim();
+}
+
+function cleanTherapistName(raw) {
+  if (!raw) return '';
+  const cleaned = raw.replace(/â[\x80-\xFF][\x80-\xFF]?/g, ', ');
+  const parts = cleaned.split(', ').map(p => p.trim()).filter(Boolean);
+  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : raw.trim();
+}
+
+function mondayOfWeek(date) {
+  // Returns YYYY-MM-DD string for the Monday of the Mon-Sun week containing `date`.
+  // JS: Sunday=0 … Saturday=6 → offset to Monday=0.
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay();
+  const offset = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() - offset);
+  return d.toISOString().slice(0, 10);
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
+
+// ── CSV parser — latin1 text read by FileReader ───────────────────────────────
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0]
+    .replace(/^\uFEFF/, '').replace(/^["'\u00EF\u00BB\u00BF]+/, '')
+    .split(',').map(h => h.replace(/^"|"$/g, '').trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const vals = [];
+    let cur = '', inQ = false;
+    for (const ch of line + ',') {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    const row = {};
+    headers.forEach((h, idx) => row[h] = vals[idx] ?? '');
+    rows.push(row);
+  }
+  return rows;
+}
+
+function detectFileType(filename) {
+  const n = filename.toLowerCase().replace(/[_\s]/g, '');
+  // Scheduled Visits is now the primary visit source (Checked-In = WebPT Analytics)
+  if (n.includes('scheduledvisits')  || n.includes('scheduled_visits'))  return 'scheduled';
+  if (n.includes('documentedvisits') || n.includes('documented_visits')) return 'docvisits';
+  if (n.includes('documentedunits')  || n.includes('documented_units'))  return 'units';
+  if (n.includes('referrals'))                                            return 'referrals';
+  return null;
+}
+
+// ── Step 1: scan incoming rows, find every (clinic, week) covered ──────────────
+function getCoveredVisitWeeks(csvRows) {
+  const covered = new Set();
+  for (const row of csvRows) {
+    const clinic = extractClinic(row['Clinic Name'] || '');
+    const dos    = parseDate(row['Date of Service']);
+    if (!clinic || !dos) continue;
+    covered.add(`${clinic}|${mondayOfWeek(dos)}`);
+  }
+  return covered;
+}
+
+function getCoveredRefWeeks(csvRows) {
+  const covered = new Set();
+  for (const row of csvRows) {
+    const clinic  = extractClinic(row['Primary Treatment Clinic'] || '');
+    const refDate = parseDate(row['Referral Received Date']);
+    if (!clinic || !refDate) continue;
+    covered.add(`${clinic}|${mondayOfWeek(refDate)}`);
+  }
+  return covered;
+}
+
+// ── Step 2: wipe all stored rows whose (clinic, week) is in the covered set ───
+function clearVisitWeeks(coveredWeeks) {
+  let cleared = 0;
+  for (const [key, row] of UPLOAD_STATE.rawVisits) {
+    if (coveredWeeks.has(`${row.short_clinic}|${row.week_start}`)) {
+      UPLOAD_STATE.rawVisits.delete(key);
+      cleared++;
+    }
+  }
+  return cleared;
+}
+
+function clearRefWeeks(coveredWeeks) {
+  let cleared = 0;
+  for (const [key, row] of UPLOAD_STATE.rawRefs) {
+    if (coveredWeeks.has(`${row.short_clinic}|${row.week_start}`)) {
+      UPLOAD_STATE.rawRefs.delete(key);
+      cleared++;
+    }
+  }
+  return cleared;
+}
+
+// ── Step 3: load incoming rows fresh (no skip — we already wiped the slate) ───
+function ingestVisitRows(csvRows) {
+  // First pass: find all (clinic, week) combinations in this file
+  const coveredWeeks = getCoveredVisitWeeks(csvRows);
+
+  // Second pass: wipe any previously stored rows for those clinic+weeks
+  // This handles: deleted visits, cancelled visits, edited visits from a re-upload
+  const replaced = clearVisitWeeks(coveredWeeks);
+
+  // Third pass: deduplicate within the incoming file itself
+  // (EMR re-exports amended notes with a new row; keep latest finalization date)
+  const dedupMap = new Map();
+  for (const row of csvRows) {
+    const clinic    = extractClinic(row['Clinic Name'] || '');
+    const caseName  = (row['Case Name'] || '').trim();
+    const dos       = parseDate(row['Date of Service']);
+    const visitType = (row['Visit Type'] || '').trim();
+    if (!clinic || !dos || !caseName) continue;
+    const key = `${clinic}|${caseName}|${dos.toISOString().slice(0,10)}|${visitType}`;
+    const dof = parseDate(row['Date of Finalization']);
+    const existing = dedupMap.get(key);
+    if (!existing || (dof && (!existing._dof || dof > existing._dof))) {
+      dedupMap.set(key, {...row, _dof: dof});
+    }
+  }
+  const dedupedRows = [...dedupMap.values()];
+
+  // Fourth pass: load deduplicated rows
+  let loaded = 0, invalid = 0;
+  for (const row of dedupedRows) {
+    const clinic    = extractClinic(row['Clinic Name'] || '');
+    const caseName  = (row['Case Name'] || '').trim();
+    const dos       = parseDate(row['Date of Service']);
+    const visitType = (row['Visit Type'] || '').trim();
+    if (!clinic || !dos || !caseName) { invalid++; continue; }
+
+    // Key uniquely identifies one documented visit
+    const key = `${clinic}|${caseName}|${dos.toISOString().slice(0,10)}|${visitType}`;
+
+    const dof = row._dof || parseDate(row['Date of Finalization']);
+    let daysSignoff = null, over48 = false;
+    if (dof && dos) {
+      const days = Math.round((dof - dos) / 86400000);
+      if (days >= 0 && days <= 60) { daysSignoff = days; over48 = days > 2; }
+    }
+
+    UPLOAD_STATE.rawVisits.set(key, {
+      short_clinic:    clinic,
+      region:          CR[clinic] || null,
+      dos:             dos.toISOString().slice(0, 10),
+      week_start:      mondayOfWeek(dos),
+      year:            dos.getFullYear(),
+      quarter:         Math.ceil((dos.getMonth() + 1) / 3),
+      visit_type:      visitType,
+      is_eval:         visitType.includes('Initial Evaluation'),
+      therapist_clean: cleanTherapistName(row['Documenting Therapist'] || ''),
+      days_to_signoff: daysSignoff,
+      over_48h:        over48,
+    });
+    loaded++;
+  }
+
+  // "added" = net new rows visible to charts (loaded minus what we replaced)
+  // "replaced" tells the user that a prior upload was overwritten
+  return { added: loaded, replaced, invalid, weeksReplaced: coveredWeeks.size };
+}
+
+function ingestRefRows(csvRows) {
+  const coveredWeeks = getCoveredRefWeeks(csvRows);
+  const replaced     = clearRefWeeks(coveredWeeks);
+
+  let loaded = 0, invalid = 0;
+  for (const row of csvRows) {
+    const clinic   = extractClinic(row['Primary Treatment Clinic'] || '');
+    const caseName = (row['Case Name'] || '').trim();
+    const refDate  = parseDate(row['Referral Received Date']);
+    if (!clinic || !refDate || !caseName) { invalid++; continue; }
+
+    const key = `${clinic}|${caseName}|${refDate.toISOString().slice(0, 10)}`;
+    const vc  = parseInt(row['Visit Count for Case']) || 0;
+    const bkt = vc<=5?'1-5':vc<=10?'6-10':vc<=15?'11-15':vc<=20?'16-20':vc<=30?'21-30':'31+';
+
+    UPLOAD_STATE.rawRefs.set(key, {
+      short_clinic:         clinic,
+      region:               CR[clinic] || null,
+      ref_date:             refDate.toISOString().slice(0, 10),
+      week_start:           mondayOfWeek(refDate),
+      year:                 refDate.getFullYear(),
+      quarter:              Math.ceil((refDate.getMonth() + 1) / 3),
+      visit_count_for_case: vc,
+      visit_bucket:         bkt,
+    });
+    loaded++;
+  }
+  return { added: loaded, replaced, invalid, weeksReplaced: coveredWeeks.size };
+}
+
+// ── Ingest Scheduled Visits (Checked-In only) → UPLOAD_STATE.rawSched ────────
+function getCoveredSchedWeeks(csvRows) {
+  const covered = new Set();
+  for (const row of csvRows) {
+    if ((row['Visit Status']||'').trim() !== 'Checked-In') continue;
+    const clinic = extractClinic(row['Clinic Name'] || '');
+    const date   = parseDate(row['Appointment Date']);
+    if (!clinic || !date) continue;
+    covered.add(`${clinic}|${mondayOfWeek(date)}`);
+  }
+  return covered;
+}
+
+function clearSchedWeeks(coveredWeeks) {
+  let cleared = 0;
+  for (const [key, row] of UPLOAD_STATE.rawSched) {
+    if (coveredWeeks.has(`${row.short_clinic}|${row.week_start}`)) {
+      UPLOAD_STATE.rawSched.delete(key);
+      cleared++;
+    }
+  }
+  return cleared;
+}
+
+function ingestSchedRows(csvRows) {
+  const checkedIn = csvRows.filter(r => (r['Visit Status']||'').trim() === 'Checked-In');
+  const coveredWeeks = getCoveredSchedWeeks(csvRows); // use all rows for week coverage
+  const replaced     = clearSchedWeeks(coveredWeeks);
+
+  let loaded = 0, invalid = 0;
+  for (const row of checkedIn) {
+    const clinic    = extractClinic(row['Clinic Name'] || '');
+    const caseTitle = (row['Case Title'] || '').trim();
+    const date      = parseDate(row['Appointment Date']);
+    const therapist = cleanSchedName(row['Treating Therapist'] || '');
+    if (!clinic || !date || !caseTitle) { invalid++; continue; }
+
+    const key = `${clinic}|${caseTitle}|${date.toISOString().slice(0,10)}|${therapist}`;
+    const apptType = (row['Appointment Type'] || '').toLowerCase();
+    const isEval   = apptType.includes('initial') || apptType.includes('evaluation');
+
+    UPLOAD_STATE.rawSched.set(key, {
+      short_clinic:    clinic,
+      region:          CR[clinic] || null,
+      appt_date:       date.toISOString().slice(0, 10),
+      week_start:      mondayOfWeek(date),
+      year:            date.getFullYear(),
+      quarter:         Math.ceil((date.getMonth() + 1) / 3),
+      therapist_clean: therapist,
+      is_eval:         isEval,
+    });
+    loaded++;
+  }
+  return { added: loaded, replaced, invalid, weeksReplaced: coveredWeeks.size };
+}
+
+
+// ── Re-aggregate S.data from raw rows ────────────────────────────────────────
+function reAggregateFromRaw() {
+  // Primary visit source: Scheduled Checked-In (matches WebPT Analytics)
+  const visits = [...UPLOAD_STATE.rawSched.values()].filter(r => r.region);
+  const refs   = [...UPLOAD_STATE.rawRefs.values()].filter(r => r.region);
+
+  // Helper: group by composite key and accumulate
+  function groupBy(rows, keyFn, initFn, accFn) {
+    const map = new Map();
+    for (const r of rows) {
+      const k = keyFn(r);
+      if (!map.has(k)) map.set(k, initFn(r));
+      accFn(map.get(k), r);
+    }
+    return [...map.values()];
+  }
+
+  const wkKey  = r => `${r.short_clinic}|${r.week_start}`;
+  const qtrKey = r => `${r.short_clinic}|${r.year}|${r.quarter}`;
+  const tKey   = r => `${r.short_clinic}|${r.year}|${r.quarter}|${r.therapist_clean}`;
+
+  // ── weekly ──
+  const weekly = groupBy(visits, wkKey,
+    r => ({
+      short_clinic:r.short_clinic, region:r.region,
+      week_start:r.week_start, year:r.year, quarter:r.quarter,
+      total_visits:0, evals:0, over_48h_count:0, total_with_signoff:0,
+      _so:[], referrals:0, ther_ex_pct:null,
+      monday_capacity_pct:null, friday_capacity_pct:null, lost_capacity:null,
+    }),
+    (acc, r) => {
+      acc.total_visits++;
+      if (r.is_eval) acc.evals++;
+      if (r.days_to_signoff != null) { acc._so.push(r.days_to_signoff); acc.total_with_signoff++; }
+      if (r.over_48h) acc.over_48h_count++;
+    }
+  );
+  // Add referral counts to weekly
+  const refByWk = new Map();
+  for (const r of refs) {
+    const k = `${r.short_clinic}|${r.week_start}`;
+    refByWk.set(k, (refByWk.get(k)||0)+1);
+  }
+  for (const w of weekly) {
+    w.referrals = refByWk.get(`${w.short_clinic}|${w.week_start}`) || 0;
+    w.avg_signoff = w._so.length ? +(w._so.reduce((a,b)=>a+b,0)/w._so.length).toFixed(2) : null;
+    w.pct_over_48h = w.total_with_signoff > 0
+      ? +((w.over_48h_count/w.total_with_signoff)*100).toFixed(2) : null;
+    delete w._so;
+  }
+  // Preserve capacity data from original S.data (not in CSVs)
+  const origCapMap = new Map(
+    (S.data.capacity||[]).map(r=>[`${r.short_clinic}|${r.week_start}`, r])
+  );
+  for (const w of weekly) {
+    const cap = origCapMap.get(`${w.short_clinic}|${w.week_start}`);
+    if (cap) {
+      w.monday_capacity_pct = cap.monday_capacity_pct;
+      w.friday_capacity_pct = cap.friday_capacity_pct;
+      w.lost_capacity       = cap.lost_capacity;
+    }
+  }
+
+  // ── vpc_dist ──
+  const vpcDistMap = new Map();
+  for (const r of refs) {
+    const k = `${r.short_clinic}|${r.year}|${r.quarter}|${r.visit_bucket}`;
+    if (!vpcDistMap.has(k)) vpcDistMap.set(k, {short_clinic:r.short_clinic,region:r.region,year:r.year,quarter:r.quarter,visit_bucket:r.visit_bucket,count:0});
+    vpcDistMap.get(k).count++;
+  }
+  const vpc_dist = [...vpcDistMap.values()];
+
+  // ── visits_per_case & visits_per_eval ──
+  const vpcRows = groupBy(refs, qtrKey,
+    r => ({short_clinic:r.short_clinic,region:r.region,year:r.year,quarter:r.quarter,_vcs:[]}),
+    (acc,r) => acc._vcs.push(r.visit_count_for_case)
+  ).map(r => ({...r, avg_visits_per_case:r._vcs.length?+(r._vcs.reduce((a,b)=>a+b,0)/r._vcs.length).toFixed(2):null, total_cases:r._vcs.length}));
+  vpcRows.forEach(r=>delete r._vcs);
+
+  const vpeRows = groupBy(visits, qtrKey,
+    r => ({short_clinic:r.short_clinic,region:r.region,year:r.year,quarter:r.quarter,total_visits:0,total_evals:0}),
+    (acc,r) => { acc.total_visits++; if(r.is_eval) acc.total_evals++; }
+  ).map(r => ({...r, visits_per_eval:r.total_evals>0?+(r.total_visits/r.total_evals).toFixed(2):null}));
+
+  // ── clinic_summary ──
+  const wkCountMap = new Map();
+  for (const w of weekly) {
+    const k = `${w.short_clinic}|${w.year}|${w.quarter}`;
+    wkCountMap.set(k, (wkCountMap.get(k)||new Set()).add(w.week_start));
+  }
+  const refQtrMap = new Map();
+  for (const r of refs) {
+    const k = qtrKey(r);
+    if (!refQtrMap.has(k)) refQtrMap.set(k, {count:0,weeks:new Set()});
+    refQtrMap.get(k).count++;
+    refQtrMap.get(k).weeks.add(r.week_start);
+  }
+  const csRows = groupBy(visits, qtrKey,
+    r => ({short_clinic:r.short_clinic,region:r.region,year:r.year,quarter:r.quarter,
+           total_visits:0,total_evals:0,over_48h_count:0,total_with_signoff:0,_so:[]}),
+    (acc,r) => {
+      acc.total_visits++; if(r.is_eval) acc.total_evals++;
+      if(r.days_to_signoff!=null){acc._so.push(r.days_to_signoff);acc.total_with_signoff++;}
+      if(r.over_48h) acc.over_48h_count++;
+    }
+  ).map(r => {
+    const wks = wkCountMap.get(`${r.short_clinic}|${r.year}|${r.quarter}`)?.size || 1;
+    const avg_so = r._so.length ? +(r._so.reduce((a,b)=>a+b,0)/r._so.length).toFixed(2) : null;
+    const rfInfo = refQtrMap.get(`${r.short_clinic}|${r.year}|${r.quarter}`);
+    const refs_per_week = rfInfo ? +(rfInfo.count / Math.max(rfInfo.weeks.size,1)).toFixed(1) : null;
+    // Preserve capacity+therex from original (those come from xlsx/units, not uploadable CSVs)
+    const orig = (S.data.clinic_summary||[]).find(c=>c.short_clinic===r.short_clinic&&c.year===r.year&&c.quarter===r.quarter);
+    return {
+      ...r, avg_signoff:avg_so,
+      pct_over_48h: r.total_with_signoff>0?+((r.over_48h_count/r.total_with_signoff)*100).toFixed(1):null,
+      visits_per_week: +(r.total_visits/wks).toFixed(1),
+      evals_per_week:  +(r.total_evals/wks).toFixed(1),
+      visits_per_eval: r.total_evals>0?+(r.total_visits/r.total_evals).toFixed(1):null,
+      weeks_active: wks,
+      refs_per_week,
+      fill_rate:         orig?.fill_rate         ?? null,
+      lost_capacity_pct: orig?.lost_capacity_pct ?? null,
+      ther_ex_pct_avg:   orig?.ther_ex_pct_avg   ?? null,
+    };
+  });
+  csRows.forEach(r=>delete r._so);
+
+  // ── therapist_summary ──
+  const tsRows = groupBy(visits, tKey,
+    r => ({short_clinic:r.short_clinic,region:r.region,year:r.year,quarter:r.quarter,
+           therapist_clean:r.therapist_clean,
+           total_visits:0,total_evals:0,over_48h_count:0,total_with_signoff:0,_so:[],_wks:new Set()}),
+    (acc,r) => {
+      acc.total_visits++; if(r.is_eval) acc.total_evals++;
+      if(r.days_to_signoff!=null){acc._so.push(r.days_to_signoff);acc.total_with_signoff++;}
+      if(r.over_48h) acc.over_48h_count++;
+      acc._wks.add(r.week_start);
+    }
+  ).filter(r => r.therapist_clean && r.therapist_clean.length > 3)
+   .map(r => {
+    const wks = r._wks.size || 1;
+    const avg_so = r._so.length ? +(r._so.reduce((a,b)=>a+b,0)/r._so.length).toFixed(2) : null;
+    // Preserve ther_ex and fill_rate from original
+    const orig = (S.data.therapist_summary||[]).find(t=>
+      t.therapist_clean===r.therapist_clean&&t.short_clinic===r.short_clinic&&
+      t.year===r.year&&t.quarter===r.quarter);
+    return {
+      ...r,
+      avg_signoff: avg_so,
+      pct_over_48h: r.total_with_signoff>0?+((r.over_48h_count/r.total_with_signoff)*100).toFixed(1):null,
+      visits_per_week: +(r.total_visits/wks).toFixed(1),
+      evals_per_week:  +(r.total_evals/wks).toFixed(1),
+      visits_per_eval: r.total_evals>0?+(r.total_visits/r.total_evals).toFixed(1):null,
+      weeks_active: wks,
+      ther_ex_pct_avg: orig?.ther_ex_pct_avg ?? null,
+      avg_fill_rate:   orig?.avg_fill_rate   ?? null,
+      refs_per_week:   orig?.refs_per_week   ?? null,
+    };
+  });
+  tsRows.forEach(r=>{ delete r._so; delete r._wks; });
+
+  // Build therapist_weekly from raw sched rows for correct week dedup in therapist table
+  const twMap = new Map();
+  for (const r of visits) {
+    const k = `${r.therapist_clean}|${r.short_clinic}|${r.year}|${r.quarter}|${r.week_start}`;
+    if (!twMap.has(k)) twMap.set(k, {
+      therapist_clean:r.therapist_clean, short_clinic:r.short_clinic,
+      region:r.region, year:r.year, quarter:r.quarter, week_start:r.week_start,
+      total_visits:0, evals:0,
+    });
+    const tw = twMap.get(k);
+    tw.total_visits++;
+    if (r.is_eval) tw.evals++;
+  }
+  const therapistWeekly = [...twMap.values()];
+
+  // Commit back to S.data — year dropdown will be rebuilt on next update() call
+  S.data.weekly            = weekly;
+  S.data.therapist_weekly  = therapistWeekly;
+  S.data.vpc_dist          = vpc_dist;
+  S.data.visits_per_eval   = vpeRows;
+  S.data.visits_per_case   = vpcRows;
+  S.data.clinic_summary    = csRows;
+  S.data.therapist_summary = tsRows;
+  // S.data.capacity stays untouched (xlsx only)
+}
+
+// ── Seed UPLOAD_STATE from the pre-aggregated embedded data ──────────────────
+// We can't reconstruct individual visit rows from aggregated data, so
+// the upload state starts empty and grows only when CSVs are uploaded.
+// De-dup on upload checks against already-uploaded raw rows only —
+// the pre-aggregated baseline is safe because it came from a clean build.
+// Duplicate detection: if someone uploads the exact same file that was
+// used to build the baseline, we rely on the fact that re-aggregation
+// replaces S.data wholesale (not appends to it), so counts won't double.
+//
+// HOWEVER — to prevent doubling the baseline when a user uploads a file
+// that was already in the build, we need to know what date ranges the
+// baseline covers per clinic. We track this as a "covered span" and
+// skip re-aggregation for weeks that have the same visit counts as the
+// baseline (i.e., nothing changed).
+//
+// Simpler & correct approach: when any CSV is uploaded, we rebuild from
+// raw rows ONLY. The pre-aggregated baseline is discarded for the affected
+// clinic+week combinations and replaced by the raw row aggregation.
+// This is safe IF the user always uploads the FULL dataset for a period
+// (not partial). For partial uploads (e.g., only Jan 2025), we merge:
+// raw-row aggregates take precedence for weeks they cover; baseline rows
+// fill in everything else.
+
+function seedUploadStateFromBaseline() {
+  // Mark which clinic+week combinations are already in the baseline
+  // so we can merge correctly later
+  UPLOAD_STATE.baselineWeekKeys = new Set(
+    (S.data.weekly||[]).map(r=>`${r.short_clinic}|${r.week_start}`)
+  );
+  // rawSched, rawDocVisits, rawRefs all start empty — uploads extend the baseline
+  UPLOAD_STATE.initialized = true;
+}
+
+// ── Merge raw aggregates with baseline ───────────────────────────────────────
+function mergeWithBaseline(newWeekly, newClinicSummary, newTherapistSummary,
+                           newVpcDist, newVpe, newVpc) {
+  // For weekly: raw rows take precedence; baseline fills gaps
+  const rawWkKeys = new Set(newWeekly.map(r=>`${r.short_clinic}|${r.week_start}`));
+  const baselineWeeklyRemainder = (S.data._baselineWeekly||[]).filter(
+    r => !rawWkKeys.has(`${r.short_clinic}|${r.week_start}`)
+  );
+
+  // For summaries: raw takes precedence per clinic+year+quarter
+  const rawQtrKeys = new Set(newClinicSummary.map(r=>`${r.short_clinic}|${r.year}|${r.quarter}`));
+  const baselineCSRemainder = (S.data._baselineCS||[]).filter(
+    r => !rawQtrKeys.has(`${r.short_clinic}|${r.year}|${r.quarter}`)
+  );
+  const baselineTSRemainder = (S.data._baselineTS||[]).filter(
+    r => !rawQtrKeys.has(`${r.short_clinic}|${r.year}|${r.quarter}`)
+  );
+
+  S.data.weekly            = [...newWeekly, ...baselineWeeklyRemainder];
+  S.data.clinic_summary    = [...newClinicSummary, ...baselineCSRemainder];
+  S.data.therapist_summary = [...newTherapistSummary, ...baselineTSRemainder];
+
+  // For vpc_dist/vpe/vpc: similar merge by raw keys
+  const rawVpcKeys = new Set(newVpcDist.map(r=>`${r.short_clinic}|${r.year}|${r.quarter}|${r.visit_bucket}`));
+  S.data.vpc_dist = [...newVpcDist, ...(S.data._baselineVpcDist||[]).filter(r=>!rawVpcKeys.has(`${r.short_clinic}|${r.year}|${r.quarter}|${r.visit_bucket}`))];
+  const rawVpeKeys = new Set(newVpe.map(r=>`${r.short_clinic}|${r.year}|${r.quarter}`));
+  S.data.visits_per_eval = [...newVpe, ...(S.data._baselineVpe||[]).filter(r=>!rawVpeKeys.has(`${r.short_clinic}|${r.year}|${r.quarter}`))];
+  S.data.visits_per_case = [...newVpc, ...(S.data._baselineVpc||[]).filter(r=>!rawVpcKeys.has(`${r.short_clinic}|${r.year}|${r.quarter}`))];
+}
+
+// ── Open/close modal ─────────────────────────────────────────────────────────
+let _pendingFiles = [];
+
+function openUploadModal() {
+  if (!UPLOAD_STATE.initialized) seedUploadStateFromBaseline();
+  _pendingFiles = [];
+  document.getElementById('upl-file-list').innerHTML = '';
+  document.getElementById('upl-summary').textContent = '';
+  document.getElementById('upl-process-btn').disabled = true;
+  document.getElementById('upl-progress-bar').style.display = 'none';
+  document.getElementById('upl-progress-fill').style.width = '0%';
+  document.getElementById('upload-modal').style.display = 'flex';
+}
+function closeUploadModal() {
+  document.getElementById('upload-modal').style.display = 'none';
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function handleUploadFiles(files) {
+  const csvs = [...files].filter(f => f.name.toLowerCase().endsWith('.csv'));
+  for (const f of csvs) {
+    if (_pendingFiles.find(p => p.file.name === f.name)) continue;
+    _pendingFiles.push({ file:f, type:detectFileType(f.name), status:'pending', added:0, dupes:0 });
+  }
+  renderUploadFileList();
+  document.getElementById('upl-process-btn').disabled = !_pendingFiles.some(p=>p.type);
+}
+
+function renderUploadFileList() {
+  const el = document.getElementById('upl-file-list');
+  el.innerHTML = _pendingFiles.map((p, i) => {
+    const typeLabel = p.type ? p.type.toUpperCase() : '⚠ Unknown — will be skipped';
+    const statusColor = p.status==='done' ? '#1a7f37' : p.status==='error' ? '#cf222e' : '#656d76';
+    let detail = '';
+    if (p.status === 'done' && p.type === 'visits' || p.type === 'referrals') {
+      detail = ` · ${p.added} rows loaded`;
+      if (p.replaced > 0) detail += ` · ${p.replaced} prior rows replaced (${p.weeksReplaced} wk${p.weeksReplaced!==1?'s':''})`;
+    } else if (p.status === 'done') {
+      detail = ' · acknowledged (no metric impact)';
+    }
+    return `<div class="upl-file-row">
+      <span class="upl-fname">${p.file.name}</span>
+      <span class="upl-badge" style="color:${statusColor}">${typeLabel}${detail}</span>
+      <button class="upl-remove" onclick="removePendingFile(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function removePendingFile(i) {
+  _pendingFiles.splice(i, 1);
+  renderUploadFileList();
+  document.getElementById('upl-process-btn').disabled = !_pendingFiles.some(p=>p.type);
+}
+
+// ── Process button ─────────────────────────────────────────────────────────────
+async function processUploadFiles() {
+  const btn = document.getElementById('upl-process-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+  document.getElementById('upl-progress-bar').style.display = 'block';
+
+  // Snapshot baseline before first upload (so we can merge later)
+  if (!S.data._baselineWeekly) {
+    S.data._baselineWeekly   = [...S.data.weekly];
+    S.data._baselineCS       = [...S.data.clinic_summary];
+    S.data._baselineTS       = [...S.data.therapist_summary];
+    S.data._baselineVpcDist  = [...S.data.vpc_dist];
+    S.data._baselineVpe      = [...S.data.visits_per_eval];
+    S.data._baselineVpc      = [...S.data.visits_per_case];
+  }
+
+  let totalLoaded = 0, totalReplaced = 0, totalWeeksReplaced = 0;
+  const fill = document.getElementById('upl-progress-fill');
+
+  for (let i = 0; i < _pendingFiles.length; i++) {
+    const pf = _pendingFiles[i];
+    fill.style.width = `${Math.round((i / _pendingFiles.length) * 90)}%`;
+
+    if (!pf.type) { pf.status = 'error'; renderUploadFileList(); continue; }
+
+    try {
+      const text = await readFileAsText(pf.file);
+      const rows = parseCSV(text);
+      let result;
+
+      if (pf.type === 'scheduled') {
+        result = ingestSchedRows(rows);
+      } else if (pf.type === 'referrals') {
+        result = ingestRefRows(rows);
+      } else if (pf.type === 'docvisits') {
+        result = ingestVisitRows(rows); // for sign-off metrics only
+      } else {
+        pf.status = 'done';
+        pf.added = 0; pf.replaced = 0; pf.weeksReplaced = 0;
+        renderUploadFileList();
+        continue;
+      }
+
+      pf.added         = result.added;
+      pf.replaced      = result.replaced;
+      pf.weeksReplaced = result.weeksReplaced;
+      pf.status        = 'done';
+      totalLoaded        += result.added;
+      totalReplaced      += result.replaced;
+      totalWeeksReplaced += result.weeksReplaced;
+    } catch (e) {
+      pf.status = 'error';
+      console.error('Upload error:', e);
+    }
+    renderUploadFileList();
+  }
+
+  fill.style.width = '95%';
+
+  // Re-aggregate if we got any new rows
+  if (UPLOAD_STATE.rawVisits.size > 0 || UPLOAD_STATE.rawRefs.size > 0) {
+    reAggregateFromRaw();
+    // Merge raw aggregates with baseline remainder
+    const rawW  = [...S.data.weekly];
+    const rawCS = [...S.data.clinic_summary];
+    const rawTS = [...S.data.therapist_summary];
+    const rawVD = [...S.data.vpc_dist];
+    const rawVE = [...S.data.visits_per_eval];
+    const rawVC = [...S.data.visits_per_case];
+    mergeWithBaseline(rawW, rawCS, rawTS, rawVD, rawVE, rawVC);
+  }
+
+  fill.style.width = '100%';
+
+  const summaryEl = document.getElementById('upl-summary');
+  if (totalLoaded > 0) {
+    let msg = `✓ ${totalLoaded.toLocaleString()} rows loaded`;
+    if (totalReplaced > 0)
+      msg += ` · replaced ${totalReplaced.toLocaleString()} prior rows across ${totalWeeksReplaced} week${totalWeeksReplaced!==1?'s':''}`;
+    msg += '. Dashboard refreshed.';
+    summaryEl.textContent = msg;
+    summaryEl.style.color = '#1a7f37';
+    setTimeout(() => { update(); closeUploadModal(); btn.textContent = 'Process & Update'; }, 800);
+  } else {
+    summaryEl.textContent = 'No valid rows found. Check that the file is a Documented Visits or Referrals export.';
+    summaryEl.style.color = '#9a6700';
+    btn.textContent = 'Process & Update';
+    btn.disabled = false;
+  }
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = e => resolve(e.target.result);
+    r.onerror = reject;
+    r.readAsText(file, 'latin1');
+  });
+}
+
+
+// ─── DRAG & DROP WIRING ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const zone  = document.getElementById('upl-drop-zone');
+  const input = document.getElementById('upl-input');
+  if (!zone || !input) return;
+
+  zone.addEventListener('click', () => input.click());
+  input.addEventListener('change', e => { handleUploadFiles(e.target.files); input.value=''; });
+
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('over'); });
+  zone.addEventListener('dragleave', e => { zone.classList.remove('over'); });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('over');
+    handleUploadFiles(e.dataTransfer.files);
+  });
+});
+
+window.__DASHBOARD_DATA__ = {"weekly":[],"therapist_weekly":[],"vpc_dist":[],"visits_per_eval":[],"capacity":[],"visits_per_case":[],"clinic_summary":[],"therapist_summary":[],"cpt_monthly":[],"cpt_meta":{"codes":[],"labels":{},"colors":{}}};
+if (window.__DASHBOARD_DATA__) { init(window.__DASHBOARD_DATA__); }
+</script>
+
+<!-- ─── UPLOAD MODAL ─────────────────────────────────────────────────────── -->
+<div id="upload-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;">
+  <div class="upl-panel">
+    <div class="upl-header">
+      <span class="upl-title">Upload CSV Data</span>
+      <button class="upl-close" onclick="closeUploadModal()">✕</button>
+    </div>
+    <div class="upl-body">
+      <div class="upl-info">
+        Drop or select exported CSVs from your EMR. Accepted file types:<br>
+        <strong>Scheduled Visits</strong> (primary — counts Checked-In) · <strong>Referrals</strong><br>
+        Documented Visits also accepted (used for sign-off metrics only).<br>
+        Re-uploading an updated file for the same week automatically replaces prior data.
+      </div>
+      <div class="upl-drop-zone" id="upl-drop-zone">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 4v12m0-12L8 8m4-4l4 4" stroke="#58a6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="16" width="18" height="4" rx="2" fill="#58a6ff" opacity=".15"/></svg>
+        <span class="upl-drop-text">Drag &amp; drop CSV files here, or <label class="upl-browse" for="upl-input">browse</label></span>
+        <input type="file" id="upl-input" accept=".csv" multiple style="display:none">
+      </div>
+      <div id="upl-file-list" class="upl-file-list"></div>
+      <div class="upl-progress-wrap" id="upl-progress-bar" style="display:none">
+        <div class="upl-progress-track"><div class="upl-progress-fill" id="upl-progress-fill"></div></div>
+      </div>
+      <div id="upl-summary" class="upl-summary"></div>
+    </div>
+    <div class="upl-footer">
+      <div class="upl-data-note" id="upl-data-note">No files queued</div>
+      <button class="upl-cancel-btn" onclick="closeUploadModal()">Cancel</button>
+      <button class="upl-process-btn" id="upl-process-btn" disabled onclick="processUploadFiles()">Process &amp; Update</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
